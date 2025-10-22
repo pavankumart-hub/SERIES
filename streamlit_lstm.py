@@ -1,32 +1,17 @@
-# app.py
+# simple_test.py
 import streamlit as st
-import traceback
 
-st.set_page_config(page_title="Stock Forecast", layout="wide")
+st.title("Simple Test App")
+st.write("If you see this, Streamlit is working!")
 
-def main():
-    st.title("📈 Stock Price Forecast")
-    
-    try:
-        import yfinance as yf
-        import pandas as pd
-        import numpy as np
-        from sklearn.linear_model import LinearRegression
-        import matplotlib.pyplot as plt
-        
-        st.success("✅ All imports successful!")
-        
-        # Simple test
-        ticker = st.text_input("Enter Ticker:", "AAPL")
-        
-        if st.button("Test Download"):
-            data = yf.download(ticker, period="1mo")
-            st.write(f"Data shape: {data.shape}")
-            st.dataframe(data.head())
-            
-    except Exception as e:
-        st.error(f"❌ Error: {e}")
-        st.text(traceback.format_exc())
+try:
+    import yfinance as yf
+    st.write("✅ yfinance imported successfully")
+except Exception as e:
+    st.write(f"❌ yfinance import failed: {e}")
 
-if __name__ == "__main__":
-    main()
+try:
+    import pandas as pd
+    st.write("✅ pandas imported successfully")
+except Exception as e:
+    st.write(f"❌ pandas import failed: {e}")
