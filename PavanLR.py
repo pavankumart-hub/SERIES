@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
-from statsmodels.tsa.stattools import kpss, acf, pacf
+from statsmodels.tsa.stattools import kpss, adfuller
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import shapiro
@@ -15,33 +15,33 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # ---------------- Streamlit Config ----------------
-st.set_page_config(page_title="ARIMA Stock Forecast", page_icon="📊", layout="wide")
-st.title("📊 Stock Forecasting using ARIMA with KPSS, ACF, PACF & Shapiro–Wilk Tests")
+st.set_page_config(page_title="Auto ARIMA Forecast", page_icon="📈", layout="wide")
+st.title("📈 Automatic ARIMA Model with KPSS, ADF, Detrending & Diagnostics")
 
 # ---------------- Sidebar Inputs ----------------
 st.sidebar.header("Settings")
 ticker = st.sidebar.text_input("Enter Stock Ticker", "AAPL").upper()
-days = st.sidebar.slider("Days to Analyze", 90, 730, 365)
-forecast_steps = st.sidebar.slider("Forecast Steps", 1, 30, 5)
+price_type = st.sidebar.selectbox("Select Price Type", ["Open", "High", "Low", "Close"])
+start_date = st.sidebar.date_input("Select Start Date", datetime(2023, 1, 1))
+forecast_steps = st.sidebar.slider("Forecast Steps (days)", 1, 30, 5)
 
-# ---------------- RUN BUTTON ----------------
+# Run button
 run_analysis = st.sidebar.button("🚀 Run Analysis")
 
+# ---------------- Start when button clicked ----------------
 if run_analysis:
     # ---------------- Download Data ----------------
-    st.subheader(f"1️⃣ Downloading Data for {ticker}")
+    st.subheader(f"1️⃣ Downloading {price_type} Data for {ticker}")
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-
     data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
     if data.empty:
-        st.error("No data found for this ticker.")
+        st.error("No data found for this ticker or date range.")
         st.stop()
 
-    series = data["High"].dropna()
+    series = data[price_type].dropna()
     st.line_chart(series, use_container_width=True)
-    st.success(f"Downloaded {len(series)} data points for {ticker}.")
+    st.success(f"Downloaded {len(series)} data points from {start_date} to {end_date.date()}.")
 
     # ---------------- KPSS Test ----------------
     st.subheader("2️⃣ KPSS Stationarity Test")
@@ -54,15 +54,15 @@ if run_analysis:
     st.write(f"**KPSS Statistic:** {stat:.4f}, **p-value:** {pval:.4f}")
 
     if pval > 0.05:
-        st.success("✅ Series is trend stationary — will detrend using polynomial regression.")
+        st.success("✅ Fail to reject H₀ → Series is trend stationary. Proceeding with detrending.")
         stationary_type = "trend_stationary"
     else:
-        st.warning("⚠️ Series is difference stationary — will apply differencing.")
+        st.warning("⚠️ Reject H₀ → Series is difference stationary. Proceeding with differencing.")
         stationary_type = "difference_stationary"
 
     # ---------------- Detrending or Differencing ----------------
     if stationary_type == "trend_stationary":
-        st.subheader("3️⃣ Detrending using Polynomial Regression (degree ≤ 9)")
+        st.subheader("3️⃣ Detrending using Polynomial Regression (<10)")
 
         x = np.arange(len(series)).reshape(-1, 1)
         best_deg, best_r2 = 1, -np.inf
@@ -87,43 +87,54 @@ if run_analysis:
         ax.legend(); ax.set_title("Trend Fit")
         st.pyplot(fig)
 
-        processed_series = detrended
-        d = 0
+        # --- Step 3A: ADF test on detrended data ---
+        st.subheader("📊 ADF Test on Detrended Series")
+        adf_stat, adf_p, _, _, crit_vals, _ = adfuller(detrended)
+        st.write(f"ADF Statistic: {adf_stat:.4f}, p-value: {adf_p:.4f}")
+        if adf_p < 0.05:
+            st.success("✅ Detrended series is stationary — proceed to ARIMA fitting.")
+            processed_series = detrended
+            d = 0
+        else:
+            st.warning("⚠️ Detrended series still non-stationary — applying differencing.")
+            processed_series = detrended.diff().dropna()
+            d = 1
+
     else:
-        st.subheader("3️⃣ First-order Differencing")
+        st.subheader("3️⃣ First-Order Differencing")
         processed_series = series.diff().dropna()
         st.line_chart(processed_series)
         st.info("Performed first-order differencing.")
         d = 1
 
-    # ---------------- ACF & PACF ----------------
-    st.subheader("4️⃣ ACF and PACF Plots")
-    lag_acf = acf(processed_series, nlags=20)
-    lag_pacf = pacf(processed_series, nlags=20)
+    # ---------------- Automatic ARIMA Grid Search ----------------
+    st.subheader("4️⃣ Automatic ARIMA Model Selection (p, q ∈ [0,5])")
 
-    fig, ax = plt.subplots(1, 2, figsize=(10, 4))
-    ax[0].stem(range(len(lag_acf)), lag_acf, use_line_collection=True)
-    ax[0].set_title("Autocorrelation (ACF)")
-    ax[1].stem(range(len(lag_pacf)), lag_pacf, use_line_collection=True)
-    ax[1].set_title("Partial Autocorrelation (PACF)")
-    plt.tight_layout()
-    st.pyplot(fig)
+    best_aic = np.inf
+    best_order = None
+    best_model = None
 
-    # ---------------- ARIMA Parameters ----------------
-    st.subheader("5️⃣ Choose ARIMA Parameters (based on ACF & PACF)")
-    p = st.sidebar.number_input("AR (p)", min_value=0, max_value=5, value=1)
-    q = st.sidebar.number_input("MA (q)", min_value=0, max_value=5, value=1)
+    for p in range(0, 6):
+        for q in range(0, 6):
+            try:
+                model = ARIMA(processed_series, order=(p, d, q))
+                fitted = model.fit()
+                if fitted.aic < best_aic:
+                    best_aic = fitted.aic
+                    best_order = (p, d, q)
+                    best_model = fitted
+            except:
+                continue
 
-    # ---------------- Fit ARIMA ----------------
-    st.subheader("6️⃣ Fitting ARIMA Model")
-    model = ARIMA(processed_series, order=(p, d, q))
-    fitted = model.fit()
-    st.write(f"**AIC:** {fitted.aic:.2f}, **Order:** (p={p}, d={d}, q={q})")
-    st.success("Model fitted successfully!")
+    if best_model is None:
+        st.error("ARIMA fitting failed for all combinations.")
+        st.stop()
 
-    # ---------------- Residual Plots ----------------
-    st.subheader("7️⃣ Residual Analysis")
-    residuals = fitted.resid
+    st.success(f"✅ Best ARIMA Order: {best_order}, AIC={best_aic:.2f}")
+
+    # ---------------- Residual Analysis ----------------
+    st.subheader("5️⃣ Residual Analysis")
+    residuals = best_model.resid
 
     fig, ax = plt.subplots(2, 1, figsize=(10, 6))
     ax[0].plot(residuals)
@@ -134,11 +145,9 @@ if run_analysis:
     st.pyplot(fig)
 
     # ---------------- Diagnostic Tests ----------------
-    st.subheader("8️⃣ Diagnostic Tests")
+    st.subheader("6️⃣ Residual Diagnostic Tests")
 
-    # ✅ Shapiro–Wilk Normality Test
     shapiro_stat, shapiro_p = shapiro(residuals)
-    # ✅ Ljung–Box Autocorrelation Test
     ljung = acorr_ljungbox(residuals, lags=[10], return_df=True)
     lb_p = ljung['lb_pvalue'].iloc[0]
 
@@ -155,24 +164,46 @@ if run_analysis:
     else:
         st.warning("⚠️ Residuals show autocorrelation.")
 
-    # ---------------- Forecast ----------------
-    st.subheader("9️⃣ Forecasting")
-    forecast = fitted.get_forecast(steps=forecast_steps)
+    # ---------------- Forecasting ----------------
+    st.subheader("7️⃣ Forecasting (in Original Scale)")
+
+    forecast = best_model.get_forecast(steps=forecast_steps)
     forecast_mean = forecast.predicted_mean
     conf_int = forecast.conf_int()
 
+    # Convert back to original scale
+    if stationary_type == "trend_stationary":
+        # Add trend back
+        future_x = np.arange(len(series), len(series) + forecast_steps).reshape(-1, 1)
+        trend_future = best_model.predict(best_poly.transform(future_x))
+        forecast_mean_orig = forecast_mean + trend_future
+        conf_int_orig = conf_int + trend_future.reshape(-1, 1)
+    else:
+        # Cumulative sum for differenced series
+        forecast_mean_orig = forecast_mean.cumsum() + series.iloc[-1]
+        conf_int_orig = conf_int + series.iloc[-1]
+
     forecast_index = pd.date_range(series.index[-1] + timedelta(days=1), periods=forecast_steps, freq='B')
 
+    # --- Plot forecast ---
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(series.index, series, label="Original", color="blue")
-    ax.plot(forecast_index, forecast_mean, label="Forecast", color="red")
-    ax.fill_between(forecast_index, conf_int.iloc[:, 0], conf_int.iloc[:, 1], color="pink", alpha=0.3)
+    ax.plot(forecast_index, forecast_mean_orig, label="Forecast", color="red")
+    ax.fill_between(forecast_index, conf_int_orig.iloc[:, 0], conf_int_orig.iloc[:, 1], color="pink", alpha=0.3)
     ax.legend()
-    ax.set_title(f"{ticker} Forecast (ARIMA({p},{d},{q})) with 95% Confidence Interval")
+    ax.set_title(f"{ticker} {price_type} Forecast (ARIMA{best_order}) - 95% CI (Original Scale)")
     st.pyplot(fig)
+
+    # --- Display forecasted values ---
+    forecast_df = pd.DataFrame({
+        "Date": forecast_index,
+        f"Forecasted {price_type}": forecast_mean_orig
+    })
+    st.write("### 📅 Forecasted Values (Original Scale)")
+    st.dataframe(forecast_df)
 
     # ---------------- Footer ----------------
     st.markdown("---")
-    st.markdown("Built with ❤️ | KPSS • ACF • PACF • ARIMA • Shapiro–Wilk • Ljung–Box • Forecasting")
+    st.markdown("Built with ❤️ | KPSS • ADF • ARIMA • Shapiro–Wilk • Ljung–Box • Forecast (Original Scale)")
 else:
-    st.info("👈 Enter parameters and click **Run Analysis** to start.")
+    st.info("👈 Enter inputs and click **Run Analysis** to begin.")
