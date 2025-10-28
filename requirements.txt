@@ -2,10 +2,12 @@ streamlit
 yfinance
 pandas
 numpy
-scikit-learn
 matplotlib
+scikit-learn
 statsmodels
 scipy
+
+
 
 
 
