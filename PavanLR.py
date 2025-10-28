@@ -173,41 +173,84 @@ if run_analysis:
     # ✅ 7. Forecasting (Original Scale)
     st.subheader("7️⃣ Forecasting (Original Scale)")
 
-    forecast = best_model.get_forecast(steps=forecast_steps)
-    forecast_mean = np.array(forecast.predicted_mean)
-    conf_int = np.array(forecast.conf_int())
+    try:
+        forecast = best_model.get_forecast(steps=forecast_steps)
+        forecast_mean = np.array(forecast.predicted_mean)
+        conf_int = np.array(forecast.conf_int())
 
-    if stationary_type == "trend_stationary":
-        future_x = np.arange(len(series), len(series) + forecast_steps).reshape(-1, 1)
-        trend_future = best_model.predict(best_poly.transform(future_x))
-        forecast_mean_orig = forecast_mean + trend_future
-        conf_int_orig = conf_int + trend_future.reshape(-1, 1)
-    else:
-        forecast_mean_orig = np.cumsum(forecast_mean) + series.iloc[-1]
-        conf_int_orig = conf_int + series.iloc[-1]
+        # Generate forecast index
+        forecast_index = pd.date_range(series.index[-1] + timedelta(days=1), periods=forecast_steps, freq='D')
+        
+        # Ensure forecast_index has the same length as forecast
+        if len(forecast_index) != len(forecast_mean):
+            forecast_index = forecast_index[:len(forecast_mean)]
 
-    forecast_index = pd.bdate_range(series.index[-1] + timedelta(days=1), periods=forecast_steps)
+        # Reconstruct to original scale
+        if stationary_type == "trend_stationary":
+            # For trend stationary: add back the trend component
+            future_x = np.arange(len(series), len(series) + len(forecast_mean)).reshape(-1, 1)
+            trend_future = best_model.predict(best_poly.transform(future_x))
+            
+            # Ensure arrays have same length
+            min_len = min(len(forecast_mean), len(trend_future))
+            forecast_mean = forecast_mean[:min_len]
+            trend_future = trend_future[:min_len]
+            conf_int = conf_int[:min_len]
+            
+            forecast_mean_orig = forecast_mean + trend_future
+            conf_int_orig = conf_int + trend_future.reshape(-1, 1)
+            
+        else:
+            # For difference stationary: cumulative sum + last value
+            forecast_mean_orig = np.cumsum(forecast_mean) + series.iloc[-1]
+            conf_int_orig = conf_int + series.iloc[-1]
 
-    # ✅ Safe plotting with shape alignment
-    min_len = min(len(forecast_index), len(forecast_mean_orig))
-    forecast_index = forecast_index[:min_len]
-    forecast_mean_orig = forecast_mean_orig[:min_len]
-    conf_int_orig = conf_int_orig[:min_len, :]
+        # Final alignment check
+        min_len = min(len(forecast_index), len(forecast_mean_orig))
+        forecast_index = forecast_index[:min_len]
+        forecast_mean_orig = forecast_mean_orig[:min_len]
+        conf_int_orig = conf_int_orig[:min_len]
 
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(series.index, series, label="Original", color="blue")
-    ax.plot(forecast_index, forecast_mean_orig, label="Forecast", color="red")
-    ax.fill_between(forecast_index, conf_int_orig[:, 0], conf_int_orig[:, 1], color="pink", alpha=0.3)
-    ax.legend()
-    ax.set_title(f"{ticker} {price_type} Forecast (ARIMA{best_order}) - 95% CI")
-    st.pyplot(fig)
+        # Plotting with safety checks
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Plot historical data
+        ax.plot(series.index, series, label="Historical", color="blue", linewidth=2)
+        
+        # Plot forecast
+        ax.plot(forecast_index, forecast_mean_orig, label="Forecast", color="red", linewidth=2, marker='o')
+        
+        # Plot confidence interval
+        ax.fill_between(forecast_index, conf_int_orig[:, 0], conf_int_orig[:, 1], 
+                       color="pink", alpha=0.3, label="95% CI")
+        
+        ax.legend()
+        ax.set_title(f"{ticker} {price_type} Forecast (ARIMA{best_order})")
+        ax.set_xlabel("Date")
+        ax.set_ylabel(price_type)
+        ax.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        st.pyplot(fig)
 
-    forecast_df = pd.DataFrame({
-        "Date": forecast_index,
-        f"Forecasted {price_type}": forecast_mean_orig
-    })
-    st.write("### 📅 Forecasted Values (Original Scale)")
-    st.dataframe(forecast_df)
+        # Forecast table
+        forecast_df = pd.DataFrame({
+            "Date": forecast_index,
+            f"Forecasted {price_type}": forecast_mean_orig,
+            "Lower CI": conf_int_orig[:, 0],
+            "Upper CI": conf_int_orig[:, 1]
+        })
+        
+        st.write("### 📅 Forecasted Values (Original Scale)")
+        st.dataframe(forecast_df.style.format({
+            f"Forecasted {price_type}": "{:.2f}",
+            "Lower CI": "{:.2f}", 
+            "Upper CI": "{:.2f}"
+        }))
+
+    except Exception as e:
+        st.error(f"❌ Error in forecasting: {str(e)}")
+        st.info("Try reducing forecast steps or using a different stock.")
 
     st.markdown("---")
     st.markdown("Built with ❤️ | KPSS • ADF • ARIMA • Shapiro–Wilk • Ljung–Box • Forecast (Original Scale)")
