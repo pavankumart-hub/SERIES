@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from statsmodels.tsa.stattools import kpss
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.stats.diagnostic import acorr_ljungbox
-from scipy.stats import jarque_bera
+from scipy.stats import shapiro
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 import warnings
@@ -131,25 +131,28 @@ plt.tight_layout()
 st.pyplot(fig)
 
 # ---------------- Diagnostic Tests ----------------
-jb_stat, jb_p, skew, kurt = jarque_bera(residuals)
+st.subheader("6️⃣ Residual Diagnostic Tests")
+
+# ✅ Shapiro–Wilk test for normality
+shapiro_stat, shapiro_p = shapiro(residuals)
 ljung = acorr_ljungbox(residuals, lags=[10], return_df=True)
 lb_p = ljung['lb_pvalue'].iloc[0]
 
-st.write(f"**Jarque–Bera p-value:** {jb_p:.4f}")
+st.write(f"**Shapiro–Wilk p-value:** {shapiro_p:.4f}")
 st.write(f"**Ljung–Box p-value:** {lb_p:.4f}")
 
-if jb_p > 0.05:
-    st.success("✅ Residuals appear normally distributed.")
+if shapiro_p > 0.05:
+    st.success("✅ Residuals appear normally distributed (Shapiro–Wilk).")
 else:
     st.warning("⚠️ Residuals may not be normal.")
 
 if lb_p > 0.05:
-    st.success("✅ No autocorrelation detected in residuals.")
+    st.success("✅ No significant autocorrelation detected in residuals (Ljung–Box).")
 else:
     st.warning("⚠️ Residuals show autocorrelation.")
 
 # ---------------- Forecasting ----------------
-st.subheader("6️⃣ Forecasting")
+st.subheader("7️⃣ Forecasting")
 
 forecast = best_model.get_forecast(steps=forecast_steps)
 forecast_mean = forecast.predicted_mean
@@ -167,4 +170,4 @@ st.pyplot(fig)
 
 # ---------------- Footer ----------------
 st.markdown("---")
-st.markdown("Built with ❤️ Streamlit | Auto ARIMA • KPSS • Detrending • Diagnostics")
+st.markdown("Built with ❤️ using Streamlit | Auto ARIMA • KPSS • Shapiro–Wilk • Ljung–Box • Forecasting")
