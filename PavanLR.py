@@ -4,26 +4,27 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from statsmodels.tsa.stattools import kpss
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from statsmodels.tsa.stattools import kpss, acf, pacf
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.tsa.stattools import acf, pacf
 from scipy.stats import jarque_bera
 from statsmodels.stats.diagnostic import acorr_ljungbox
 import warnings
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="Auto ARIMA with KPSS", layout="wide")
-st.title("📈 ARIMA Model Selection via KPSS, ACF & PACF")
+st.set_page_config(page_title="ARIMA with KPSS and Trend Handling", layout="wide")
+st.title("📈 ARIMA Modelling with KPSS, Detrending & Diagnostic Tests")
 
 # Step 1: Download data
-ticker = st.sidebar.text_input("Ticker Symbol", "AAPL").upper()
-days = st.sidebar.slider("Days of Data", 100, 2000, 365)
+ticker = st.sidebar.text_input("Enter Stock Ticker", "AAPL").upper()
+days = st.sidebar.slider("Days of Data", 200, 2000, 365)
 
 start = datetime.now() - timedelta(days=days)
 end = datetime.now()
 
-if st.button("Run Analysis"):
+if st.button("Run Full Analysis"):
     with st.spinner("Downloading data..."):
         data = yf.download(ticker, start=start, end=end, progress=False)
 
@@ -31,63 +32,77 @@ if st.button("Run Analysis"):
         st.error("No data found. Check ticker symbol.")
         st.stop()
 
+    st.subheader("Step 1️⃣: High Price Data")
+    st.line_chart(data["High"])
     series = data["High"].dropna()
-    st.line_chart(series)
 
     # Step 2: KPSS Test
-    st.subheader("KPSS Test for Stationarity")
+    st.subheader("Step 2️⃣: KPSS Test for Stationarity")
 
     def kpss_test(ts, regression='ct'):
-        try:
-            stat, p, lags, crit = kpss(ts, regression=regression, nlags='auto')
-            return stat, p, crit
-        except Exception as e:
-            return None, None, str(e)
+        stat, p_value, lags, crit = kpss(ts, regression=regression, nlags='auto')
+        return stat, p_value, crit
 
     stat, p_value, crit = kpss_test(series)
-    if isinstance(crit, str):
-        st.error(f"KPSS Error: {crit}")
-        st.stop()
-
-    st.write(f"KPSS Statistic: {stat:.4f}, p-value: {p_value:.4f}")
+    st.write(f"**KPSS Statistic:** {stat:.4f}, **p-value:** {p_value:.4f}")
     st.write("Critical Values:", crit)
 
-    if p_value < 0.05:
-        st.warning("❌ Series is non-stationary → differencing once (d=1)")
-        series_diff = series.diff().dropna()
-        d = 1
-    else:
-        st.success("✅ Series is stationary → no differencing (d=0)")
-        series_diff = series
+    # If H0 accepted => trend stationary → detrend using best polynomial (<10)
+    if p_value > 0.05:
+        st.success("✅ KPSS H₀ accepted: Series is Trend-Stationary → Performing Detrending")
+
+        best_deg = 1
+        best_r2 = -np.inf
+        t = np.arange(len(series)).reshape(-1, 1)
+
+        for deg in range(1, 10):
+            poly = PolynomialFeatures(degree=deg)
+            X_poly = poly.fit_transform(t)
+            model = LinearRegression().fit(X_poly, series)
+            r2 = model.score(X_poly, series)
+            if r2 > best_r2:
+                best_r2 = r2
+                best_deg = deg
+                best_model = model
+                best_poly = poly
+
+        trend = best_model.predict(best_poly.fit_transform(t))
+        detrended = series - trend
+
+        st.write(f"Best Polynomial Degree: {best_deg}, R² = {best_r2:.4f}")
+        fig, ax = plt.subplots()
+        ax.plot(series, label="Original Series")
+        ax.plot(trend, label=f"Polynomial Trend (deg={best_deg})", color='red')
+        ax.legend()
+        st.pyplot(fig)
+
+        series_final = detrended
         d = 0
 
-    # Step 3: ACF & PACF
-    st.subheader("ACF and PACF Plots")
+    else:
+        st.warning("❌ KPSS H₁ accepted: Series is Non-Stationary → Differencing Applied")
+        series_final = series.diff().dropna()
+        d = 1
+
+    # Step 3: ACF and PACF
+    st.subheader("Step 3️⃣: ACF & PACF Plots and ARIMA Fitting")
     fig, ax = plt.subplots(1, 2, figsize=(10, 4))
-    plot_acf(series_diff, ax=ax[0], lags=40)
-    plot_pacf(series_diff, ax=ax[1], lags=40, method="ywm")
+    plot_acf(series_final, ax=ax[0], lags=40)
+    plot_pacf(series_final, ax=ax[1], lags=40, method="ywm")
     ax[0].set_title("ACF")
     ax[1].set_title("PACF")
     st.pyplot(fig)
 
-    # Step 4: Auto ARIMA(p,q) suggestion
-    st.subheader("Suggested ARIMA Parameters from ACF/PACF")
-
-    # Basic heuristic based on first significant lag
-    acf_vals = acf(series_diff, nlags=20)
-    pacf_vals = pacf(series_diff, nlags=20)
-
-    # ignore lag 0
+    acf_vals = acf(series_final, nlags=20)
+    pacf_vals = pacf(series_final, nlags=20)
     acf_peaks = np.where(np.abs(acf_vals[1:]) > 0.2)[0] + 1
     pacf_peaks = np.where(np.abs(pacf_vals[1:]) > 0.2)[0] + 1
 
     p = pacf_peaks[0] if len(pacf_peaks) > 0 else 0
     q = acf_peaks[0] if len(acf_peaks) > 0 else 0
 
-    st.write(f"Based on ACF/PACF, suggested ARIMA order: **p={p}, d={d}, q={q}**")
+    st.write(f"Suggested ARIMA Order: (p={p}, d={d}, q={q})")
 
-    # Step 5: Fit ARIMA model
-    st.subheader(f"Fitting ARIMA({p},{d},{q}) model")
     try:
         model = ARIMA(series, order=(p, d, q))
         result = model.fit()
@@ -96,18 +111,26 @@ if st.button("Run Analysis"):
         st.error(f"ARIMA fitting error: {e}")
         st.stop()
 
-    # Step 6: Residual Plot
+    # Step 4: Residuals
+    st.subheader("Step 4️⃣: Residual Analysis")
     residuals = result.resid.dropna()
-    st.subheader("Residual Analysis")
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(residuals, color='purple', linewidth=1)
-    ax.axhline(0, color='black', linestyle='--')
-    ax.set_title("Residuals over Time")
-    st.pyplot(fig)
 
-    # Step 7: Diagnostic Tests
-    st.subheader("Diagnostic Tests")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("Residual Line Plot")
+        fig1, ax1 = plt.subplots()
+        ax1.plot(residuals, color="purple")
+        ax1.axhline(0, color='black', linestyle='--')
+        st.pyplot(fig1)
 
+    with col2:
+        st.write("Residual Histogram")
+        fig2, ax2 = plt.subplots()
+        ax2.hist(residuals, bins=25, color='teal', alpha=0.7)
+        st.pyplot(fig2)
+
+    # Step 5: Tests
+    st.subheader("Step 5️⃣: Diagnostic Tests")
     jb_stat, jb_p, skew, kurt = jarque_bera(residuals)
     lb_stat, lb_p = acorr_ljungbox(residuals, lags=[10], return_df=False)
     lb_stat, lb_p = lb_stat[0], lb_p[0]
@@ -124,17 +147,3 @@ if st.button("Run Analysis"):
         st.success("✅ No autocorrelation in residuals (Ljung–Box).")
     else:
         st.warning("⚠️ Autocorrelation detected in residuals.")
-
-    # Step 8: Forecast
-    st.subheader("Forecast (Next 10 Steps)")
-    forecast = result.get_forecast(steps=10)
-    mean_forecast = forecast.predicted_mean
-    conf_int = forecast.conf_int()
-
-    fig2, ax2 = plt.subplots(figsize=(10, 5))
-    ax2.plot(series, label="Observed")
-    ax2.plot(mean_forecast.index, mean_forecast.values, color='red', label="Forecast")
-    ax2.fill_between(conf_int.index, conf_int.iloc[:, 0], conf_int.iloc[:, 1],
-                     color='pink', alpha=0.3, label="95% CI")
-    ax2.legend()
-    st.pyplot(fig2)
