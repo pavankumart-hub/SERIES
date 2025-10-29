@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 
 # ---------------- Streamlit Config ----------------
 st.set_page_config(page_title="Auto ARIMA Forecast", page_icon="📈", layout="wide")
-st.title("📈 Auto ARIMA Forecast with Detrending, KPSS, ADF, and Diagnostics")
+st.title("📈 Auto ARIMA Forecast with KPSS, Detrending, and Diagnostics")
 
 # ---------------- Sidebar Inputs ----------------
 st.sidebar.header("Settings")
@@ -41,33 +41,36 @@ if run_analysis:
         st.stop()
 
     if data.empty:
-        st.error("❌ No data found for this ticker. Try adding '.NS' or '.BO' for Indian stocks.")
+        st.error("❌ No data found. Try adding '.NS' (NSE) or '.BO' (BSE) for Indian stocks.")
         st.stop()
 
+    # ✅ Fix index
+    data.index = pd.to_datetime(data.index)
     series = data[price_type].dropna()
+
     st.line_chart(series, use_container_width=True)
-    st.success(f"Downloaded {len(series)} data points from {start_date} to {end_date.date()}.")
+    st.success(f"Fetched {len(series)} records from {start_date} to {end_date.date()}.")
 
     # ✅ 2. KPSS Test
     st.subheader("2️⃣ KPSS Stationarity Test")
 
     def kpss_test(ts):
-        stat, p, lags, crit = kpss(ts, regression="c", nlags="auto")
+        stat, p, _, _ = kpss(ts, regression="c", nlags="auto")
         return stat, p
 
     stat, pval = kpss_test(series)
     st.write(f"**KPSS Statistic:** {stat:.4f}, **p-value:** {pval:.4f}")
 
     if pval > 0.05:
-        st.success("✅ Trend stationary — proceeding with detrending.")
+        st.success("✅ Trend stationary → Detrending.")
         stationary_type = "trend_stationary"
     else:
-        st.warning("⚠️ Difference stationary — applying differencing.")
+        st.warning("⚠️ Difference stationary → Differencing.")
         stationary_type = "difference_stationary"
 
     # ✅ 3. Detrending or Differencing
     if stationary_type == "trend_stationary":
-        st.subheader("3️⃣ Detrending using Polynomial Regression (<10)")
+        st.subheader("3️⃣ Detrending using Polynomial Regression (degree < 10)")
 
         x = np.arange(len(series)).reshape(-1, 1)
         best_deg, best_r2 = 1, -np.inf
@@ -84,38 +87,33 @@ if run_analysis:
 
         trend = best_model.predict(best_poly.transform(x))
         detrended = series - trend
-        st.write(f"**Best Polynomial Degree:** {best_deg} (R²={best_r2:.4f})")
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(series.index, series, label="Original", color="blue")
         ax.plot(series.index, trend, label=f"Trend (deg={best_deg})", color="red")
         ax.legend()
-        ax.set_title("Trend Fit")
+        ax.set_title("Polynomial Trend Fit")
         st.pyplot(fig)
 
-        # ✅ ADF Test on Detrended Series
-        st.subheader("📊 ADF Test on Detrended Data")
-        adf_stat, adf_p, _, _, _, _ = adfuller(detrended)
+        adf_stat, adf_p, *_ = adfuller(detrended)
         st.write(f"ADF Statistic: {adf_stat:.4f}, p-value: {adf_p:.4f}")
 
         if adf_p < 0.05:
-            st.success("✅ Detrended series is stationary — fitting ARIMA.")
             processed_series = detrended
             d = 0
+            st.success("✅ Detrended series is stationary.")
         else:
-            st.warning("⚠️ Detrended still non-stationary — applying differencing.")
             processed_series = detrended.diff().dropna()
             d = 1
-
+            st.warning("⚠️ Applied differencing after detrending.")
     else:
-        st.subheader("3️⃣ Applying First-Order Differencing")
+        st.subheader("3️⃣ Differencing to achieve stationarity")
         processed_series = series.diff().dropna()
         st.line_chart(processed_series)
-        st.info("Performed differencing to achieve stationarity.")
         d = 1
 
     # ✅ 4. ARIMA Grid Search
-    st.subheader("4️⃣ Automatic ARIMA Model Selection (p,q ∈ [0,5])")
+    st.subheader("4️⃣ ARIMA Model Selection (p, q ∈ [0,5])")
     best_aic = np.inf
     best_order = None
     best_model = None
@@ -136,46 +134,47 @@ if run_analysis:
         st.error("❌ ARIMA fitting failed for all combinations.")
         st.stop()
 
-    st.success(f"✅ Best ARIMA Order: {best_order}, AIC={best_aic:.2f}")
+    st.success(f"✅ Best ARIMA Order: {best_order}, AIC = {best_aic:.2f}")
 
     # ✅ 5. Residual Analysis
     st.subheader("5️⃣ Residual Analysis")
     residuals = best_model.resid
 
     fig, ax = plt.subplots(2, 1, figsize=(10, 6))
-    ax[0].plot(residuals, color='blue')
+    ax[0].plot(residuals, color="blue")
     ax[0].set_title("Residuals Over Time")
-    ax[1].hist(residuals, bins=25, color='gray', edgecolor='black')
+    ax[1].hist(residuals, bins=25, color="gray", edgecolor="black")
     ax[1].set_title("Residual Histogram")
     plt.tight_layout()
     st.pyplot(fig)
 
     # ✅ 6. Diagnostic Tests
-    st.subheader("6️⃣ Residual Diagnostic Tests")
+    st.subheader("6️⃣ Diagnostic Tests on Residuals")
 
     shapiro_stat, shapiro_p = shapiro(residuals)
     ljung = acorr_ljungbox(residuals, lags=[10], return_df=True)
-    lb_p = ljung['lb_pvalue'].iloc[0]
+    lb_p = ljung["lb_pvalue"].iloc[0]
 
     st.write(f"**Shapiro–Wilk p-value:** {shapiro_p:.4f}")
     st.write(f"**Ljung–Box p-value:** {lb_p:.4f}")
 
     if shapiro_p > 0.05:
-        st.success("✅ Residuals appear normally distributed.")
+        st.success("✅ Residuals appear normal.")
     else:
         st.warning("⚠️ Residuals may not be normal.")
 
     if lb_p > 0.05:
-        st.success("✅ No significant autocorrelation detected.")
+        st.success("✅ No autocorrelation in residuals.")
     else:
         st.warning("⚠️ Residuals show autocorrelation.")
 
-    # ✅ 7. Forecasting (Original Scale)
+    # ✅ 7. Forecasting
     st.subheader("7️⃣ Forecasting (Original Scale)")
-
     forecast = best_model.get_forecast(steps=forecast_steps)
-    forecast_mean = np.array(forecast.predicted_mean)
-    conf_int = np.array(forecast.conf_int())
+    forecast_mean = forecast.predicted_mean
+    conf_int = forecast.conf_int()
+
+    forecast_index = pd.bdate_range(start=series.index[-1] + timedelta(days=1), periods=forecast_steps)
 
     if stationary_type == "trend_stationary":
         future_x = np.arange(len(series), len(series) + forecast_steps).reshape(-1, 1)
@@ -183,22 +182,21 @@ if run_analysis:
         forecast_mean_orig = forecast_mean + trend_future
         conf_int_orig = conf_int + trend_future.reshape(-1, 1)
     else:
-        forecast_mean_orig = np.cumsum(forecast_mean) + series.iloc[-1]
+        forecast_mean_orig = forecast_mean.cumsum() + series.iloc[-1]
         conf_int_orig = conf_int + series.iloc[-1]
 
-    forecast_index = pd.bdate_range(series.index[-1] + timedelta(days=1), periods=forecast_steps)
-
+    # ✅ Ensure lengths match
     min_len = min(len(forecast_index), len(forecast_mean_orig))
     forecast_index = forecast_index[:min_len]
     forecast_mean_orig = forecast_mean_orig[:min_len]
-    conf_int_orig = conf_int_orig[:min_len, :]
+    conf_int_orig = conf_int_orig.iloc[:min_len, :]
 
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(series.index, series, label="Original", color="blue")
     ax.plot(forecast_index, forecast_mean_orig, label="Forecast", color="red")
-    ax.fill_between(forecast_index, conf_int_orig[:, 0], conf_int_orig[:, 1], color="pink", alpha=0.3)
+    ax.fill_between(forecast_index, conf_int_orig.iloc[:, 0], conf_int_orig.iloc[:, 1], color="pink", alpha=0.3)
     ax.legend()
-    ax.set_title(f"{ticker} {price_type} Forecast (ARIMA{best_order}) - 95% CI")
+    ax.set_title(f"{ticker} {price_type} Forecast (ARIMA{best_order})")
     st.pyplot(fig)
 
     forecast_df = pd.DataFrame({
