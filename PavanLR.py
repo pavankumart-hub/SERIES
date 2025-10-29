@@ -1,4 +1,4 @@
-# 📈 ARIMA + Polynomial Detrending Dashboard (Fixed Execution Version)
+# 📈 ARIMA + Polynomial Detrending Dashboard (Fixed ARIMA Version)
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -17,8 +17,8 @@ st.set_page_config(page_title="ARIMA + Polynomial Detrending Dashboard", layout=
 st.title("📈 ARIMA + Polynomial Detrending Dashboard")
 
 # Sidebar inputs
-ticker = st.sidebar.text_input("Stock Ticker", "RELIANCE.NS")
-start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2018-01-01"))
+ticker = st.sidebar.text_input("Stock Ticker", "AAPL")
+start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2020-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 forecast_steps = st.sidebar.slider("Forecast Steps", 5, 30, 10)
 run_btn = st.sidebar.button("Run Full Analysis")
@@ -95,7 +95,7 @@ if run_btn:
                 if kpss_p > 0.05:
                     st.info("✅ Trend stationary → Applying polynomial detrending.")
                     best_deg, best_r2 = 1, -np.inf
-                    for deg in range(1, 4):  # Reduced from 5 to 3 for stability
+                    for deg in range(1, 3):  # Reduced to 2 for stability
                         try:
                             p = Polynomial.fit(x, y, deg)
                             fit_y = p(x)
@@ -118,124 +118,169 @@ if run_btn:
                     processed = np.diff(y, n=1)
                     d_order = 1
 
-                # Ensure processed data is valid
+                # Ensure processed data is valid and not constant
                 if processed is None or len(processed) < 10:
                     st.warning(f"Not enough valid detrended data for {col}, using simple differencing.")
                     processed = np.diff(y, n=1)
                     d_order = 1
 
-                # --- Step 3: Fit ARIMA (simplified search) ---
+                # Check if processed data has variance
+                if np.std(processed) < 1e-10:
+                    st.warning("Processed data has very low variance, adding small noise for stability.")
+                    processed = processed + np.random.normal(0, 1e-6, len(processed))
+
+                # --- Step 3: Fit ARIMA with more robust approach ---
                 best_model, best_order, best_aic = None, None, np.inf
                 
-                # Try only common ARIMA orders for stability
-                orders_to_try = [(1, d_order, 1), (1, d_order, 0), (0, d_order, 1), 
-                               (2, d_order, 2), (0, d_order, 0)]
+                # Try simpler orders first
+                orders_to_try = [
+                    (0, 0, 0),  # White noise model
+                    (1, 0, 0),  # AR(1)
+                    (0, 0, 1),  # MA(1)
+                    (1, 0, 1),  # ARMA(1,1)
+                    (0, 1, 0),  # Random walk
+                    (1, 1, 0),  # ARIMA(1,1,0)
+                    (0, 1, 1),  # ARIMA(0,1,1)
+                    (1, 1, 1),  # ARIMA(1,1,1)
+                ]
+                
+                successful_models = []
                 
                 for order in orders_to_try:
                     try:
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            model = ARIMA(processed, order=order).fit()
-                            if model.aic < best_aic and not np.isnan(model.aic):
-                                best_aic, best_model, best_order = model.aic, model, order
-                    except:
+                            # Adjust differencing order based on our preprocessing
+                            actual_d_order = d_order + order[1]
+                            final_order = (order[0], actual_d_order, order[2])
+                            
+                            # For zero differencing, use original processed data
+                            if actual_d_order == 0:
+                                model_data = processed
+                            else:
+                                # Use original data and let ARIMA handle differencing
+                                model_data = y
+                                final_order = (order[0], actual_d_order, order[2])
+                            
+                            model = ARIMA(model_data, order=final_order).fit()
+                            
+                            if not np.isnan(model.aic) and np.isfinite(model.aic):
+                                successful_models.append((model, final_order, model.aic))
+                                
+                    except Exception as e:
                         continue
 
-                if best_model is None:
-                    st.warning("ARIMA search failed, trying simple AR(1) model.")
-                    try:
-                        best_model = ARIMA(processed, order=(1, d_order, 0)).fit()
-                        best_order = (1, d_order, 0)
-                        best_aic = best_model.aic
-                    except:
-                        st.error(f"❌ Could not fit ARIMA model for {col}")
-                        completed += 1
-                        continue
+                # Select best model from successful ones
+                if successful_models:
+                    successful_models.sort(key=lambda x: x[2])  # Sort by AIC
+                    best_model, best_order, best_aic = successful_models[0]
+                    st.success(f"✅ Best ARIMA order: {best_order}, AIC = {best_aic:.2f}")
+                else:
+                    # Last resort: simple mean model
+                    st.warning("No ARIMA models converged, using simple forecasting")
+                    class SimpleModel:
+                        def __init__(self, data):
+                            self.data = data
+                            self.resid = np.diff(data) - np.mean(np.diff(data))
+                            self.aic = 1000  # Placeholder
+                        
+                        def forecast(self, steps):
+                            last_value = self.data[-1]
+                            drift = np.mean(np.diff(self.data[-10:])) if len(self.data) > 10 else 0
+                            return np.array([last_value + drift * (i+1) for i in range(steps)])
+                        
+                        @property
+                        def fittedvalues(self):
+                            return self.data[:-1]  # Simple placeholder
+                    
+                    best_model = SimpleModel(y)
+                    best_order = (0, 1, 0)
+                    best_aic = 1000
 
-                st.success(f"✅ Best ARIMA order: {best_order}, AIC = {best_aic:.2f}")
-
-                # --- Step 4: Diagnostics ---
-                residuals = best_model.resid
-                residuals_clean = residuals[~np.isnan(residuals)]
-                
-                if len(residuals_clean) > 3:
-                    try:
-                        shapiro_p = shapiro(residuals_clean)[1]
-                    except:
+                # --- Step 4: Diagnostics (only if we have a proper model) ---
+                if hasattr(best_model, 'resid'):
+                    residuals = best_model.resid
+                    residuals_clean = residuals[~np.isnan(residuals)]
+                    
+                    if len(residuals_clean) > 3:
+                        try:
+                            shapiro_p = shapiro(residuals_clean)[1]
+                        except:
+                            shapiro_p = 0.0
+                    else:
                         shapiro_p = 0.0
+                        
+                    if len(residuals_clean) > 5:
+                        try:
+                            ljung_p = acorr_ljungbox(residuals_clean, lags=[min(5, len(residuals_clean)-1)], return_df=True)["lb_pvalue"].iloc[0]
+                        except:
+                            ljung_p = 0.0
+                    else:
+                        ljung_p = 0.0
+
+                    shapiro_msg = (
+                        f"🟩 **Shapiro–Wilk p = {shapiro_p:.4f} → Normal Residuals**"
+                        if shapiro_p > 0.05
+                        else f"🟥 **Shapiro–Wilk p = {shapiro_p:.4f} → Not Normal**"
+                    )
+                    ljung_msg = (
+                        f"🟩 **Ljung–Box p = {ljung_p:.4f} → No Autocorrelation**"
+                        if ljung_p > 0.05
+                        else f"🟥 **Ljung–Box p = {ljung_p:.4f} → Autocorrelation Detected**"
+                    )
+                    st.markdown(shapiro_msg)
+                    st.markdown(ljung_msg)
                 else:
                     shapiro_p = 0.0
-                    
-                if len(residuals_clean) > 10:
-                    try:
-                        ljung_p = acorr_ljungbox(residuals_clean, lags=[min(10, len(residuals_clean)-1)], return_df=True)["lb_pvalue"].iloc[0]
-                    except:
-                        ljung_p = 0.0
-                else:
                     ljung_p = 0.0
+                    st.info("Simple model used - diagnostics skipped")
 
-                shapiro_msg = (
-                    f"🟩 **Shapiro–Wilk p = {shapiro_p:.4f} → Normal Residuals**"
-                    if shapiro_p > 0.05
-                    else f"🟥 **Shapiro–Wilk p = {shapiro_p:.4f} → Not Normal**"
-                )
-                ljung_msg = (
-                    f"🟩 **Ljung–Box p = {ljung_p:.4f} → No Autocorrelation**"
-                    if ljung_p > 0.05
-                    else f"🟥 **Ljung–Box p = {ljung_p:.4f} → Autocorrelation Detected**"
-                )
-                st.markdown(shapiro_msg)
-                st.markdown(ljung_msg)
-
-                # --- Step 5: Fitted + Forecast ---
-                fitted = best_model.fittedvalues
+                # --- Step 5: Forecasting ---
                 try:
-                    forecast_diff = best_model.forecast(steps=forecast_steps)
+                    forecast_values = best_model.forecast(steps=forecast_steps)
+                    # Ensure forecast is properly shaped
+                    if hasattr(forecast_values, 'values'):
+                        forecast_values = forecast_values.values
+                    forecast_values = np.array(forecast_values).flatten()
                 except:
-                    # Simple forecast as fallback
-                    last_value = processed[-1] if len(processed) > 0 else 0
-                    forecast_diff = np.full(forecast_steps, last_value)
-
-                future_x = np.arange(len(x), len(x) + forecast_steps)
-
-                # Reconstruct forecast to original scale
-                if d_order == 0 and best_poly is not None:
-                    try:
-                        poly_future = best_poly(future_x)
-                        full_forecast = poly_future + forecast_diff
-                    except:
-                        full_forecast = y[-1] + np.cumsum(forecast_diff)
-                else:
-                    full_forecast = y[-1] + np.cumsum(forecast_diff)
+                    # Fallback forecasting
+                    last_value = y[-1]
+                    trend = np.mean(np.diff(y[-10:])) if len(y) > 10 else 0
+                    forecast_values = np.array([last_value + trend * (i+1) for i in range(forecast_steps)])
 
                 forecast_df = pd.DataFrame({
                     "Step": range(1, forecast_steps + 1),
-                    "Forecast": full_forecast
+                    "Forecast": forecast_values
                 })
 
                 # --- Step 6: Plot ---
                 fig, ax = plt.subplots(figsize=(10, 4))
                 ax.plot(series.index, y, label="Original", color="blue", linewidth=1)
                 
-                # Plot fitted values
-                if len(fitted) <= len(series) and len(fitted) > 0:
-                    if d_order == 0 and best_poly is not None:
-                        fitted_original_scale = trend[-len(fitted):] + fitted
-                    else:
-                        fitted_original_scale = y[-len(fitted):]  # Simplified for differenced series
-                    
-                    ax.plot(series.index[-len(fitted):], fitted_original_scale, 
-                           label="Fitted", color="orange", linewidth=1)
+                # Plot fitted values if available
+                if hasattr(best_model, 'fittedvalues') and len(best_model.fittedvalues) > 0:
+                    fitted_len = len(best_model.fittedvalues)
+                    if fitted_len <= len(y):
+                        ax.plot(series.index[-fitted_len:], 
+                               y[-fitted_len:] if d_order == 1 else best_model.fittedvalues,
+                               label="Fitted", color="orange", linewidth=1)
                 
-                ax.set_title(f"{col} — Original vs Fitted")
+                # Plot forecast
+                future_dates = pd.date_range(start=series.index[-1], periods=forecast_steps+1, freq='D')[1:]
+                ax.plot(future_dates, forecast_values, label="Forecast", color="red", linestyle="--", linewidth=1)
+                
+                ax.set_title(f"{col} — Price Analysis & Forecast")
                 ax.set_ylabel(f"Price ({symbol})")
                 ax.legend()
+                plt.xticks(rotation=45)
                 st.pyplot(fig)
                 plt.close()
 
                 # Print forecast values
                 st.write(f"**Forecasted {col} Values ({symbol}):**")
-                st.dataframe(forecast_df.style.format({"Forecast": f"{symbol}{{:.2f}}"}))
+                forecast_display = forecast_df.copy()
+                forecast_display["Forecast"] = forecast_display["Forecast"].round(2)
+                st.dataframe(forecast_display.style.format({"Forecast": "{:.2f}"}))
 
                 results_summary.append({
                     "Series": col,
@@ -259,7 +304,12 @@ if run_btn:
         st.markdown("---")
         st.markdown("### 📊 Analysis Summary")
         if results_summary:
-            st.dataframe(pd.DataFrame(results_summary))
+            summary_df = pd.DataFrame(results_summary)
+            st.dataframe(summary_df)
+            
+            # Show best model
+            best_model_row = summary_df.loc[summary_df['AIC'].idxmin()]
+            st.success(f"**Best performing model:** {best_model_row['Series']} with ARIMA{best_model_row['ARIMA']} (AIC: {best_model_row['AIC']})")
         else:
             st.warning("No successful analyses completed.")
 
@@ -268,4 +318,4 @@ if run_btn:
 
     except Exception as e:
         st.error(f"Fatal error: {str(e)}")
-        st.info("Try using a different ticker or date range.")
+        st.info("Try using a different ticker or date range. Recommended: AAPL, MSFT, GOOGL")
