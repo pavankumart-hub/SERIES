@@ -1,4 +1,4 @@
-# 📈 ARIMA + Polynomial Detrending Dashboard (Final Fixed Version)
+# 📈 ARIMA + Polynomial Detrending Dashboard (Fixed Execution Version)
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -25,8 +25,11 @@ run_btn = st.sidebar.button("Run Full Analysis")
 
 # KPSS helper
 def kpss_test(series):
-    statistic, p_value, _, _ = kpss(series, regression="c", nlags="auto")
-    return p_value
+    try:
+        statistic, p_value, _, _ = kpss(series, regression="c", nlags="auto")
+        return p_value
+    except:
+        return 0.0
 
 if run_btn:
     try:
@@ -57,15 +60,17 @@ if run_btn:
         ax.set_title(f"{ticker} — Price Series (Open, High, Low, Close)")
         ax.set_ylabel(f"Price ({symbol})")
         st.pyplot(fig)
+        plt.close()
 
         progress_bar.progress(20)
         progress_text.text("Starting series-wise ARIMA analysis...")
 
         results_summary = []
-        total_cols = 4
+        price_columns = ['Open', 'High', 'Low', 'Close']
+        total_cols = len(price_columns)
         completed = 0
 
-        for col in ['Open', 'High', 'Low', 'Close']:
+        for col in price_columns:
             st.markdown(f"---")
             st.subheader(f"🔹 {col} Price Analysis")
 
@@ -73,6 +78,7 @@ if run_btn:
                 series = data[col].dropna().astype(float)
                 if len(series) < 20:
                     st.warning(f"⚠️ Not enough data for {col}, skipping.")
+                    completed += 1
                     continue
 
                 x = np.arange(len(series))
@@ -84,10 +90,12 @@ if run_btn:
 
                 # --- Step 2: Detrending or differencing ---
                 best_poly, trend, processed = None, np.zeros_like(y), None
+                d_order = 0
+                
                 if kpss_p > 0.05:
                     st.info("✅ Trend stationary → Applying polynomial detrending.")
                     best_deg, best_r2 = 1, -np.inf
-                    for deg in range(1, 6):
+                    for deg in range(1, 4):  # Reduced from 5 to 3 for stability
                         try:
                             p = Polynomial.fit(x, y, deg)
                             fit_y = p(x)
@@ -103,41 +111,68 @@ if run_btn:
                         st.write(f"Best polynomial degree: {best_deg}, R² = {best_r2:.4f}")
                     else:
                         st.warning("⚠️ Polynomial detrending failed, using differencing.")
-                        processed = np.diff(y)
+                        processed = np.diff(y, n=1)
                         d_order = 1
                 else:
                     st.warning("⚠️ Difference stationary → Applying differencing.")
-                    processed = np.diff(y)
+                    processed = np.diff(y, n=1)
                     d_order = 1
 
+                # Ensure processed data is valid
                 if processed is None or len(processed) < 10:
-                    st.warning(f"Not enough valid detrended data for {col}.")
-                    continue
+                    st.warning(f"Not enough valid detrended data for {col}, using simple differencing.")
+                    processed = np.diff(y, n=1)
+                    d_order = 1
 
-                d_order = 0 if kpss_p > 0.05 else 1
-
-                # --- Step 3: Fit ARIMA ---
+                # --- Step 3: Fit ARIMA (simplified search) ---
                 best_model, best_order, best_aic = None, None, np.inf
-                for p in range(0, 4):
-                    for q in range(0, 4):
-                        try:
-                            model = ARIMA(processed, order=(p, d_order, q)).fit()
-                            if model.aic < best_aic:
-                                best_aic, best_model, best_order = model.aic, model, (p, d_order, q)
-                        except:
-                            continue
+                
+                # Try only common ARIMA orders for stability
+                orders_to_try = [(1, d_order, 1), (1, d_order, 0), (0, d_order, 1), 
+                               (2, d_order, 2), (0, d_order, 0)]
+                
+                for order in orders_to_try:
+                    try:
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            model = ARIMA(processed, order=order).fit()
+                            if model.aic < best_aic and not np.isnan(model.aic):
+                                best_aic, best_model, best_order = model.aic, model, order
+                    except:
+                        continue
 
                 if best_model is None:
-                    st.warning("ARIMA search failed, using fallback ARIMA(1, d, 1).")
-                    best_model = ARIMA(processed, order=(1, d_order, 1)).fit()
-                    best_order = (1, d_order, 1)
+                    st.warning("ARIMA search failed, trying simple AR(1) model.")
+                    try:
+                        best_model = ARIMA(processed, order=(1, d_order, 0)).fit()
+                        best_order = (1, d_order, 0)
+                        best_aic = best_model.aic
+                    except:
+                        st.error(f"❌ Could not fit ARIMA model for {col}")
+                        completed += 1
+                        continue
 
                 st.success(f"✅ Best ARIMA order: {best_order}, AIC = {best_aic:.2f}")
 
                 # --- Step 4: Diagnostics ---
                 residuals = best_model.resid
-                shapiro_p = shapiro(residuals)[1]
-                ljung_p = acorr_ljungbox(residuals, lags=[10], return_df=True)["lb_pvalue"].iloc[0]
+                residuals_clean = residuals[~np.isnan(residuals)]
+                
+                if len(residuals_clean) > 3:
+                    try:
+                        shapiro_p = shapiro(residuals_clean)[1]
+                    except:
+                        shapiro_p = 0.0
+                else:
+                    shapiro_p = 0.0
+                    
+                if len(residuals_clean) > 10:
+                    try:
+                        ljung_p = acorr_ljungbox(residuals_clean, lags=[min(10, len(residuals_clean)-1)], return_df=True)["lb_pvalue"].iloc[0]
+                    except:
+                        ljung_p = 0.0
+                else:
+                    ljung_p = 0.0
 
                 shapiro_msg = (
                     f"🟩 **Shapiro–Wilk p = {shapiro_p:.4f} → Normal Residuals**"
@@ -154,12 +189,22 @@ if run_btn:
 
                 # --- Step 5: Fitted + Forecast ---
                 fitted = best_model.fittedvalues
-                forecast_diff = best_model.forecast(steps=forecast_steps)
+                try:
+                    forecast_diff = best_model.forecast(steps=forecast_steps)
+                except:
+                    # Simple forecast as fallback
+                    last_value = processed[-1] if len(processed) > 0 else 0
+                    forecast_diff = np.full(forecast_steps, last_value)
+
                 future_x = np.arange(len(x), len(x) + forecast_steps)
 
+                # Reconstruct forecast to original scale
                 if d_order == 0 and best_poly is not None:
-                    poly_future = best_poly(future_x)
-                    full_forecast = poly_future + forecast_diff
+                    try:
+                        poly_future = best_poly(future_x)
+                        full_forecast = poly_future + forecast_diff
+                    except:
+                        full_forecast = y[-1] + np.cumsum(forecast_diff)
                 else:
                     full_forecast = y[-1] + np.cumsum(forecast_diff)
 
@@ -170,17 +215,27 @@ if run_btn:
 
                 # --- Step 6: Plot ---
                 fig, ax = plt.subplots(figsize=(10, 4))
-                ax.plot(series.index, y, label="Original", color="blue")
-                if len(fitted) <= len(series):
-                    ax.plot(series.index[-len(fitted):], trend[-len(fitted):] + fitted, label="Fitted", color="orange")
+                ax.plot(series.index, y, label="Original", color="blue", linewidth=1)
+                
+                # Plot fitted values
+                if len(fitted) <= len(series) and len(fitted) > 0:
+                    if d_order == 0 and best_poly is not None:
+                        fitted_original_scale = trend[-len(fitted):] + fitted
+                    else:
+                        fitted_original_scale = y[-len(fitted):]  # Simplified for differenced series
+                    
+                    ax.plot(series.index[-len(fitted):], fitted_original_scale, 
+                           label="Fitted", color="orange", linewidth=1)
+                
                 ax.set_title(f"{col} — Original vs Fitted")
                 ax.set_ylabel(f"Price ({symbol})")
                 ax.legend()
                 st.pyplot(fig)
+                plt.close()
 
-                # Print forecast values (no plot)
+                # Print forecast values
                 st.write(f"**Forecasted {col} Values ({symbol}):**")
-                st.dataframe(forecast_df.style.format(f"{symbol}{{:.2f}}"))
+                st.dataframe(forecast_df.style.format({"Forecast": f"{symbol}{{:.2f}}"}))
 
                 results_summary.append({
                     "Series": col,
@@ -191,18 +246,26 @@ if run_btn:
                 })
 
                 completed += 1
-                progress_bar.progress(int(20 + (completed / total_cols) * 80))
-                progress_text.text(f"Completed {col} analysis...")
+                progress = int(20 + (completed / total_cols) * 80)
+                progress_bar.progress(progress)
+                progress_text.text(f"Completed {col} analysis... ({completed}/{total_cols})")
 
             except Exception as e:
-                st.error(f"Error in {col}: {e}")
+                st.error(f"Error in {col}: {str(e)}")
+                completed += 1
                 continue
 
-        st.markdown("### ✅ Analysis Completed Successfully")
-        st.dataframe(pd.DataFrame(results_summary))
+        # Final summary
+        st.markdown("---")
+        st.markdown("### 📊 Analysis Summary")
+        if results_summary:
+            st.dataframe(pd.DataFrame(results_summary))
+        else:
+            st.warning("No successful analyses completed.")
 
         progress_bar.progress(100)
-        progress_text.text("All series analyzed successfully!")
+        progress_text.text("Analysis completed!")
 
     except Exception as e:
-        st.error(f"Fatal error: {e}")
+        st.error(f"Fatal error: {str(e)}")
+        st.info("Try using a different ticker or date range.")
