@@ -9,7 +9,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from statsmodels.stats.diagnostic import acorr_ljungbox
-from scipy.stats import jarque_bera
+from scipy.stats import jarque_bera, skew, kurtosis
 import statsmodels.api as sm
 import warnings
 
@@ -141,6 +141,31 @@ if run_btn:
         ax.grid(alpha=0.3)
         plt.tight_layout()
         st.pyplot(fig)
+
+        # Calculate skewness and kurtosis
+        residual_skew = skew(residuals)
+        residual_kurtosis = kurtosis(residuals, fisher=True)  # Fisher's definition (normal = 0)
+        
+        # Display skewness and kurtosis
+        st.subheader("Residual Distribution Statistics")
+        col_skew, col_kurt = st.columns(2)
+        with col_skew:
+            st.metric("Skewness", f"{residual_skew:.4f}")
+            if abs(residual_skew) < 0.5:
+                st.success("✓ Near symmetric (good)")
+            elif abs(residual_skew) < 1.0:
+                st.warning("∼ Moderately skewed")
+            else:
+                st.error("✗ Highly skewed")
+                
+        with col_kurt:
+            st.metric("Kurtosis", f"{residual_kurtosis:.4f}")
+            if abs(residual_kurtosis) < 0.5:
+                st.success("✓ Near normal kurtosis (good)")
+            elif abs(residual_kurtosis) < 1.0:
+                st.warning("∼ Moderate deviation from normal")
+            else:
+                st.error("✗ Heavy-tailed or light-tailed")
 
         # Diagnostics: Ljung-Box and Jarque-Bera (safe wrappers)
         st.subheader("Residual Diagnostics (statistical tests)")
