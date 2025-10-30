@@ -356,8 +356,6 @@ if run_analysis_btn:
             # Method 3: Raw values for verification
             st.subheader("🔢 Raw Forecast Values (Verification)")
             st.write(f"**Forecast array:** {residual_forecast}")
-            st.write(f"**Data type:** {type(residual_forecast)}")
-            st.write(f"**Array length:** {len(residual_forecast)}")
             
             # Plot ARIMA forecast (optional)
             st.subheader("📈 Forecast Visualization")
