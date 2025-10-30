@@ -464,8 +464,6 @@ if run_analysis_btn:
             # Method 3: Raw values for verification
             st.subheader("🔢 Raw Forecast Values (Verification)")
             st.write(f"**Forecast array:** {residual_forecast}")
-            st.write(f"**Data type:** {type(residual_forecast)}")
-            st.write(f"**Array length:** {len(residual_forecast)}")
             
             # Plot ARIMA forecast (optional)
             st.subheader("📈 Forecast Visualization")
@@ -643,16 +641,22 @@ if run_analysis_btn:
             # ARIMA Residuals Analysis for Original Data
             st.header("ARIMA Residuals Analysis for Original Stock Data")
             
-            # Get residuals from the best ARIMA model
+            # Get residuals from the best ARIMA model - FIXED: Handle numpy array properly
             arima_residuals = best_original_arima_model.resid
-            # Remove NaN values that might occur due to differencing
-            arima_residuals_clean = arima_residuals.dropna()
+            
+            # Convert to pandas Series if it's a numpy array and remove NaN values
+            if isinstance(arima_residuals, np.ndarray):
+                arima_residuals_clean = pd.Series(arima_residuals).dropna()
+            else:
+                arima_residuals_clean = arima_residuals.dropna()
             
             # Residuals time plot
             st.subheader("ARIMA Residuals Time Series")
             fig, ax = plt.subplots(figsize=(12, 4))
-            ax.plot(price_data.index[len(price_data) - len(arima_residuals_clean):], arima_residuals_clean, 
-                   label='ARIMA Residuals', linewidth=1)
+            
+            # Get the corresponding dates for the residuals
+            residual_dates = price_data.index[len(price_data) - len(arima_residuals_clean):]
+            ax.plot(residual_dates, arima_residuals_clean, label='ARIMA Residuals', linewidth=1)
             ax.axhline(0, linestyle='--', color='k')
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Residual ({currency_symbol})')
@@ -715,6 +719,7 @@ if run_analysis_btn:
                                                              alpha=0.7, color='lightgreen', edgecolor='black')
             
             # Add normal distribution curve for comparison
+            from scipy.stats import norm
             xmin_arima, xmax_arima = ax.get_xlim()
             x_arima = np.linspace(xmin_arima, xmax_arima, 100)
             p_arima = norm.pdf(x_arima, arima_residual_mean, arima_residual_std)
@@ -793,4 +798,5 @@ if run_analysis_btn:
 
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
-        st.info("Try a smaller degree, shorter date range, or different ticker.")          
+        st.info("Try a smaller degree, shorter date range, or different ticker.")
+        
