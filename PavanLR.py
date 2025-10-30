@@ -347,3 +347,35 @@ if run_analysis_btn:
             plt.xticks(rotation=45)
             plt.tight_layout()
             st.pyplot(fig)
+            
+            # PRINT THE 5 FORECASTED VALUES CLEARLY
+            st.subheader("🎯 5 Forecasted Residual Values")
+            
+            # Method 1: Simple list
+            st.write("**Forecasted Values:**")
+            for i in range(forecast_steps):
+                st.write(f"Day {i+1} ({future_dates[i].strftime('%Y-%m-%d')}): {currency_symbol}{residual_forecast[i]:.6f}")
+            
+            # Method 2: Table
+            st.subheader("📋 Forecast Table")
+            forecast_data = []
+            for i in range(forecast_steps):
+                forecast_data.append({
+                    'Day': i + 1,
+                    'Date': future_dates[i].strftime('%Y-%m-%d'),
+                    'Forecasted_Residual': f"{residual_forecast[i]:.6f}",
+                    'CI_Lower': f"{residual_ci_lower[i]:.6f}",
+                    'CI_Upper': f"{residual_ci_upper[i]:.6f}"
+                })
+            
+            forecast_df = pd.DataFrame(forecast_data)
+            st.dataframe(forecast_df)
+            
+            # Method 3: Raw values
+            st.subheader("🔢 Raw Forecast Values")
+            st.write(f"**Forecast array:** {residual_forecast}")
+            st.write(f"**Data type:** {type(residual_forecast)}")
+            
+    except Exception as main_ex:
+        st.error(f"Main pipeline error: {main_ex}")
+        st.info("Try a smaller degree, shorter date range, or different ticker.")
