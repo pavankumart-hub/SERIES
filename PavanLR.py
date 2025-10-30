@@ -1,4 +1,4 @@
-# 📈 ARIMA + Polynomial Detrending Dashboard (Fixed ARIMA Version)
+# 📈 ARIMA + Polynomial Detrending Dashboard (Fixed KPSS Version)
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -23,13 +23,30 @@ end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 forecast_steps = st.sidebar.slider("Forecast Steps", 5, 30, 10)
 run_btn = st.sidebar.button("Run Full Analysis")
 
-# KPSS helper
+# FIXED KPSS helper function
 def kpss_test(series):
+    """
+    Perform KPSS test for stationarity
+    Returns: p-value (float)
+    """
     try:
-        statistic, p_value, _, _ = kpss(series, regression="c", nlags="auto")
+        # Clean the series - remove NaNs and ensure it's numeric
+        series_clean = series.dropna()
+        if len(series_clean) < 10:  # Need minimum data points
+            return 0.0
+            
+        # Perform KPSS test
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            statistic, p_value, n_lags, critical_values = kpss(
+                series_clean, 
+                regression='c',  # constant trend
+                nlags='auto'     # automatic lag selection
+            )
         return p_value
-    except:
-        return 0.0
+    except Exception as e:
+        st.warning(f"KPSS test failed: {str(e)}")
+        return 0.0  # Default to non-stationary if test fails
 
 if run_btn:
     try:
@@ -84,18 +101,28 @@ if run_btn:
                 x = np.arange(len(series))
                 y = series.values
 
-                # --- Step 1: KPSS ---
+                # --- Step 1: KPSS Test (FIXED) ---
+                st.write("**🔍 Performing KPSS Stationarity Test...**")
                 kpss_p = kpss_test(series)
-                st.write(f"**KPSS p-value:** {kpss_p:.4f}")
+                
+                # Display KPSS results clearly
+                st.write(f"**KPSS Test p-value:** {kpss_p:.6f}")
+                
+                if kpss_p > 0.05:
+                    st.success("✅ **KPSS Result:** Series is TREND STATIONARY (p > 0.05)")
+                    st.info("**Action:** Applying polynomial detrending")
+                else:
+                    st.warning("⚠️ **KPSS Result:** Series is DIFFERENCE STATIONARY (p ≤ 0.05)")
+                    st.info("**Action:** Applying differencing")
 
                 # --- Step 2: Detrending or differencing ---
                 best_poly, trend, processed = None, np.zeros_like(y), None
                 d_order = 0
                 
                 if kpss_p > 0.05:
-                    st.info("✅ Trend stationary → Applying polynomial detrending.")
+                    # Trend stationary - use polynomial detrending
                     best_deg, best_r2 = 1, -np.inf
-                    for deg in range(1, 3):  # Reduced to 2 for stability
+                    for deg in range(1, 3):
                         try:
                             p = Polynomial.fit(x, y, deg)
                             fit_y = p(x)
@@ -108,19 +135,38 @@ if run_btn:
                     if best_poly is not None:
                         trend = best_poly(x)
                         processed = y - trend
-                        st.write(f"Best polynomial degree: {best_deg}, R² = {best_r2:.4f}")
+                        st.write(f"**Polynomial Detrending:** Degree {best_deg}, R² = {best_r2:.4f}")
+                        
+                        # Plot detrending result
+                        fig_detrend, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+                        
+                        # Original + trend
+                        ax1.plot(series.index, y, label='Original', color='blue')
+                        ax1.plot(series.index, trend, label=f'Poly Trend (deg {best_deg})', color='red')
+                        ax1.set_title(f'{col} - Original Series with Polynomial Trend')
+                        ax1.legend()
+                        
+                        # Detrended series
+                        ax2.plot(series.index, processed, label='Detrended', color='green')
+                        ax2.set_title(f'{col} - Detrended Series')
+                        ax2.legend()
+                        
+                        plt.tight_layout()
+                        st.pyplot(fig_detrend)
+                        plt.close()
                     else:
                         st.warning("⚠️ Polynomial detrending failed, using differencing.")
                         processed = np.diff(y, n=1)
                         d_order = 1
                 else:
-                    st.warning("⚠️ Difference stationary → Applying differencing.")
+                    # Difference stationary - use differencing
                     processed = np.diff(y, n=1)
                     d_order = 1
+                    st.write(f"**Differencing Applied:** Order {d_order}")
 
-                # Ensure processed data is valid and not constant
+                # Ensure processed data is valid
                 if processed is None or len(processed) < 10:
-                    st.warning(f"Not enough valid detrended data for {col}, using simple differencing.")
+                    st.warning(f"Not enough valid processed data for {col}, using simple differencing.")
                     processed = np.diff(y, n=1)
                     d_order = 1
 
@@ -129,10 +175,9 @@ if run_btn:
                     st.warning("Processed data has very low variance, adding small noise for stability.")
                     processed = processed + np.random.normal(0, 1e-6, len(processed))
 
-                # --- Step 3: Fit ARIMA with more robust approach ---
+                # --- Step 3: Fit ARIMA ---
                 best_model, best_order, best_aic = None, None, np.inf
                 
-                # Try simpler orders first
                 orders_to_try = [
                     (0, 0, 0),  # White noise model
                     (1, 0, 0),  # AR(1)
@@ -150,15 +195,12 @@ if run_btn:
                     try:
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            # Adjust differencing order based on our preprocessing
                             actual_d_order = d_order + order[1]
                             final_order = (order[0], actual_d_order, order[2])
                             
-                            # For zero differencing, use original processed data
                             if actual_d_order == 0:
                                 model_data = processed
                             else:
-                                # Use original data and let ARIMA handle differencing
                                 model_data = y
                                 final_order = (order[0], actual_d_order, order[2])
                             
@@ -170,19 +212,18 @@ if run_btn:
                     except Exception as e:
                         continue
 
-                # Select best model from successful ones
+                # Select best model
                 if successful_models:
-                    successful_models.sort(key=lambda x: x[2])  # Sort by AIC
+                    successful_models.sort(key=lambda x: x[2])
                     best_model, best_order, best_aic = successful_models[0]
-                    st.success(f"✅ Best ARIMA order: {best_order}, AIC = {best_aic:.2f}")
+                    st.success(f"✅ **Best ARIMA Model:** {best_order}, AIC = {best_aic:.2f}")
                 else:
-                    # Last resort: simple mean model
                     st.warning("No ARIMA models converged, using simple forecasting")
                     class SimpleModel:
                         def __init__(self, data):
                             self.data = data
                             self.resid = np.diff(data) - np.mean(np.diff(data))
-                            self.aic = 1000  # Placeholder
+                            self.aic = 1000
                         
                         def forecast(self, steps):
                             last_value = self.data[-1]
@@ -191,13 +232,13 @@ if run_btn:
                         
                         @property
                         def fittedvalues(self):
-                            return self.data[:-1]  # Simple placeholder
+                            return self.data[:-1]
                     
                     best_model = SimpleModel(y)
                     best_order = (0, 1, 0)
                     best_aic = 1000
 
-                # --- Step 4: Diagnostics (only if we have a proper model) ---
+                # --- Step 4: Diagnostics ---
                 if hasattr(best_model, 'resid'):
                     residuals = best_model.resid
                     residuals_clean = residuals[~np.isnan(residuals)]
@@ -218,18 +259,21 @@ if run_btn:
                     else:
                         ljung_p = 0.0
 
-                    shapiro_msg = (
-                        f"🟩 **Shapiro–Wilk p = {shapiro_p:.4f} → Normal Residuals**"
-                        if shapiro_p > 0.05
-                        else f"🟥 **Shapiro–Wilk p = {shapiro_p:.4f} → Not Normal**"
-                    )
-                    ljung_msg = (
-                        f"🟩 **Ljung–Box p = {ljung_p:.4f} → No Autocorrelation**"
-                        if ljung_p > 0.05
-                        else f"🟥 **Ljung–Box p = {ljung_p:.4f} → Autocorrelation Detected**"
-                    )
-                    st.markdown(shapiro_msg)
-                    st.markdown(ljung_msg)
+                    # Display diagnostic results
+                    st.subheader("📊 Model Diagnostics")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if shapiro_p > 0.05:
+                            st.success(f"✅ **Normality Test:** p = {shapiro_p:.4f} (Normal)")
+                        else:
+                            st.error(f"❌ **Normality Test:** p = {shapiro_p:.4f} (Not Normal)")
+                    
+                    with col2:
+                        if ljung_p > 0.05:
+                            st.success(f"✅ **Autocorrelation Test:** p = {ljung_p:.4f} (No AC)")
+                        else:
+                            st.error(f"❌ **Autocorrelation Test:** p = {ljung_p:.4f} (AC Detected)")
                 else:
                     shapiro_p = 0.0
                     ljung_p = 0.0
@@ -238,12 +282,10 @@ if run_btn:
                 # --- Step 5: Forecasting ---
                 try:
                     forecast_values = best_model.forecast(steps=forecast_steps)
-                    # Ensure forecast is properly shaped
                     if hasattr(forecast_values, 'values'):
                         forecast_values = forecast_values.values
                     forecast_values = np.array(forecast_values).flatten()
                 except:
-                    # Fallback forecasting
                     last_value = y[-1]
                     trend = np.mean(np.diff(y[-10:])) if len(y) > 10 else 0
                     forecast_values = np.array([last_value + trend * (i+1) for i in range(forecast_steps)])
@@ -253,11 +295,11 @@ if run_btn:
                     "Forecast": forecast_values
                 })
 
-                # --- Step 6: Plot ---
+                # --- Step 6: Plot Results ---
+                st.subheader("📈 Forecast Results")
                 fig, ax = plt.subplots(figsize=(10, 4))
                 ax.plot(series.index, y, label="Original", color="blue", linewidth=1)
                 
-                # Plot fitted values if available
                 if hasattr(best_model, 'fittedvalues') and len(best_model.fittedvalues) > 0:
                     fitted_len = len(best_model.fittedvalues)
                     if fitted_len <= len(y):
@@ -265,25 +307,25 @@ if run_btn:
                                y[-fitted_len:] if d_order == 1 else best_model.fittedvalues,
                                label="Fitted", color="orange", linewidth=1)
                 
-                # Plot forecast
                 future_dates = pd.date_range(start=series.index[-1], periods=forecast_steps+1, freq='D')[1:]
                 ax.plot(future_dates, forecast_values, label="Forecast", color="red", linestyle="--", linewidth=1)
                 
-                ax.set_title(f"{col} — Price Analysis & Forecast")
+                ax.set_title(f"{col} — ARIMA{best_order} Forecast")
                 ax.set_ylabel(f"Price ({symbol})")
                 ax.legend()
                 plt.xticks(rotation=45)
                 st.pyplot(fig)
                 plt.close()
 
-                # Print forecast values
-                st.write(f"**Forecasted {col} Values ({symbol}):**")
+                # Display forecast values
+                st.write(f"**Forecasted {col} Prices:**")
                 forecast_display = forecast_df.copy()
                 forecast_display["Forecast"] = forecast_display["Forecast"].round(2)
                 st.dataframe(forecast_display.style.format({"Forecast": "{:.2f}"}))
 
                 results_summary.append({
                     "Series": col,
+                    "KPSS p-value": round(kpss_p, 4),
                     "ARIMA": best_order,
                     "AIC": round(best_aic, 2),
                     "Shapiro p": round(shapiro_p, 4),
@@ -307,7 +349,6 @@ if run_btn:
             summary_df = pd.DataFrame(results_summary)
             st.dataframe(summary_df)
             
-            # Show best model
             best_model_row = summary_df.loc[summary_df['AIC'].idxmin()]
             st.success(f"**Best performing model:** {best_model_row['Series']} with ARIMA{best_model_row['ARIMA']} (AIC: {best_model_row['AIC']})")
         else:
