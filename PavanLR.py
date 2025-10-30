@@ -69,7 +69,7 @@ def safe_jarque_bera(resids):
 def safe_kpss(data):
     try:
         # KPSS test with different regression types
-        kpss_stat, p_value, lags, critical_values = kpss(data, regression='c', nlags='auto')
+        kpss_stat, p_value, lags, critical_values = kpss(data, regression='ct', nlags='auto')
         
         # Manual p-value calculation based on critical values
         # KPSS critical values at 1%, 5%, 10% significance levels
@@ -78,14 +78,14 @@ def safe_kpss(data):
         cv_10pct = critical_values['10%']
         
         # Determine p-value based on test statistic and critical values
-        if kpss_stat < cv_10pct:
-            manual_pvalue = 0.99  # Very stationary
-        elif kpss_stat < cv_5pct:
-            manual_pvalue = 0.10  # Stationary at 10% level
-        elif kpss_stat < cv_1pct:
-            manual_pvalue = 0.05  # Stationary at 5% level
+        if kpss_stat > cv_1pct:
+            manual_pvalue = 0.01  # Reject null at 1% level - Strong evidence of non-stationarity
+        elif kpss_stat > cv_5pct:
+            manual_pvalue = 0.05  # Reject null at 5% level - Evidence of non-stationarity
+        elif kpss_stat > cv_10pct:
+            manual_pvalue = 0.10  # Reject null at 10% level - Weak evidence of non-stationarity
         else:
-            manual_pvalue = 0.01  # Non-stationary at 1% level
+            manual_pvalue = 0.50  # Fail to reject null - Evidence of stationarity
             
         return float(kpss_stat), float(manual_pvalue), critical_values, None
     except Exception as ex:
@@ -135,29 +135,19 @@ if run_btn:
             
             # Display critical values
             st.write("**Critical Values:**")
-            col_cv1, col_cv2, col_cv3 = st.columns(3)
-            with col_cv1:
-                st.write(f"1%: {kpss_critical_values['1%']:.4f}")
-            with col_cv2:
-                st.write(f"5%: {kpss_critical_values['5%']:.4f}")
-            with col_cv3:
-                st.write(f"10%: {kpss_critical_values['10%']:.4f}")
-            
-            # Interpretation
-            if kpss_stat > kpss_critical_values['1%']:
-                st.error("✗ Strong evidence of non-stationarity (test statistic > 1% critical value)")
-            elif kpss_stat > kpss_critical_values['5%']:
-                st.warning("∼ Evidence of non-stationarity (test statistic > 5% critical value)")
-            elif kpss_stat > kpss_critical_values['10%']:
-                st.warning("∼ Weak evidence of non-stationarity (test statistic > 10% critical value)")
+            st.write(f"5% Critical Value: {kpss_critical_values['5%']:.4f}")
+
+# Interpretation using only 5% critical value
+            if kpss_stat > kpss_critical_values['5%']:
+            st.error("✗ Data is Difference-stationary (test statistic > 5% critical value)")
             else:
-                st.success("✓ Data appears stationary (test statistic < all critical values)")
-        
+            st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
+                    
         st.info("""
         **KPSS Test Interpretation:**
-        - Null Hypothesis: Data is stationary
-        - Reject null if test statistic > critical value (data is non-stationary)
-        - Fail to reject null if test statistic < critical value (data is stationary)
+        - Null Hypothesis: Data is Trend-stationary
+        - Reject null if test statistic > critical value (data is Difference-stationary)
+        - Fail to reject null if test statistic < critical value (data is Trend-stationary)
         """)
 
         # show basics
