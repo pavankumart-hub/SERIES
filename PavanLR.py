@@ -327,11 +327,14 @@ if run_analysis_btn:
             # Plot ARIMA forecast
             fig, ax = plt.subplots(figsize=(12, 6))
             
-            # Plot historical residuals
-            ax.plot(price_data.index, residuals, label='Historical Residuals', linewidth=2, color='blue')
+            # Plot historical residuals (last 50 points for clarity)
+            plot_points = min(50, len(residuals))
+            ax.plot(price_data.index[-plot_points:], residuals[-plot_points:], 
+                   label='Historical Residuals', linewidth=2, color='blue')
             
             # Plot forecast
-            ax.plot(future_dates, residual_forecast, label='ARIMA Forecast', linewidth=2, color='red')
+            ax.plot(future_dates, residual_forecast, label='ARIMA Forecast', 
+                   linewidth=3, color='red', marker='o', markersize=8)
             ax.fill_between(future_dates, residual_ci_lower, residual_ci_upper, 
                           color='pink', alpha=0.3, label='95% Confidence Interval')
             
@@ -345,30 +348,62 @@ if run_analysis_btn:
             plt.tight_layout()
             st.pyplot(fig)
             
-            # Forecast details table
+            # Forecast details table - PROPERLY DISPLAYED
             st.subheader("ARIMA Forecast Details (Residuals)")
-            forecast_df = pd.DataFrame({
-                'Date': future_dates,
-                f'Residual_Forecast ({currency_symbol})': residual_forecast.round(4),
-                f'CI_Lower ({currency_symbol})': residual_ci_lower.round(4),
-                f'CI_Upper ({currency_symbol})': residual_ci_upper.round(4)
-            })
             
-            st.dataframe(forecast_df)
+            # Create detailed forecast table
+            forecast_data = []
+            for i in range(forecast_steps):
+                forecast_data.append({
+                    'Day': f'Day {i+1}',
+                    'Date': future_dates[i].strftime('%Y-%m-%d'),
+                    'Residual_Forecast': residual_forecast[i],
+                    'CI_Lower': residual_ci_lower[i],
+                    'CI_Upper': residual_ci_upper[i]
+                })
             
-            # Next day residual forecast
-            st.subheader("Next Day Residual Forecast")
+            forecast_df = pd.DataFrame(forecast_data)
+            
+            # Format the display with proper decimal places
+            display_forecast_df = forecast_df.copy()
+            display_forecast_df['Residual_Forecast'] = display_forecast_df['Residual_Forecast'].apply(lambda x: f"{x:.6f}")
+            display_forecast_df['CI_Lower'] = display_forecast_df['CI_Lower'].apply(lambda x: f"{x:.6f}")
+            display_forecast_df['CI_Upper'] = display_forecast_df['CI_Upper'].apply(lambda x: f"{x:.6f}")
+            
+            st.dataframe(display_forecast_df)
+            
+            # Print raw forecast values clearly
+            st.subheader("Forecasted Residual Values")
+            for i in range(forecast_steps):
+                st.write(f"**{future_dates[i].strftime('%Y-%m-%d')} (Day {i+1}):** {currency_symbol}{residual_forecast[i]:.6f}")
+            
+            # Next day residual forecast - CLEARLY DISPLAYED
+            st.subheader("Next Day Residual Forecast Details")
             next_day_residual = residual_forecast[0]
             next_day_ci_lower = residual_ci_lower[0]
             next_day_ci_upper = residual_ci_upper[0]
             
+            st.write(f"**Date:** {future_dates[0].strftime('%Y-%m-%d')}")
+            st.write(f"**Forecasted Residual:** {currency_symbol}{next_day_residual:.6f}")
+            st.write(f"**95% Confidence Interval:** [{currency_symbol}{next_day_ci_lower:.6f}, {currency_symbol}{next_day_ci_upper:.6f}]")
+            
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Residual Forecast", f"{currency_symbol}{next_day_residual:.4f}")
+                st.metric(
+                    "Residual Forecast", 
+                    f"{currency_symbol}{next_day_residual:.6f}",
+                    delta=f"{next_day_residual:.6f}"
+                )
             with col2:
-                st.metric("CI Lower", f"{currency_symbol}{next_day_ci_lower:.4f}")
+                st.metric("CI Lower", f"{currency_symbol}{next_day_ci_lower:.6f}")
             with col3:
-                st.metric("CI Upper", f"{currency_symbol}{next_day_ci_upper:.4f}")
+                st.metric("CI Upper", f"{currency_symbol}{next_day_ci_upper:.6f}")
+                
+            # Debug information to verify values exist
+            st.subheader("Debug Information")
+            st.write(f"Residual forecast array: {residual_forecast}")
+            st.write(f"Residual forecast shape: {residual_forecast.shape}")
+            st.write(f"Forecast object type: {type(arima_forecast)}")
                 
         else:
             st.error("No ARIMA models could be fitted with the selected parameters.")
