@@ -495,7 +495,302 @@ if run_analysis_btn:
             plt.xticks(rotation=45)
             plt.tight_layout()
             st.pyplot(fig)
+        # ARIMA Analysis on Original Stock Data
+        st.header("ARIMA Analysis on Original Stock Data")
+        
+        st.subheader("ARIMA Model Selection for Original Data")
+        st.write(f"**ARIMA Parameters Range:**")
+        st.write(f"- P (AR): 0 to 5")
+        st.write(f"- D (Differencing): 0 to 2") 
+        st.write(f"- Q (MA): 0 to 5")
+        
+        original_results = []
+        with st.spinner("Fitting ARIMA models to original stock data..."):
+            for p in range(0, 6):  # 0 to 5
+                for d in range(0, 3):  # 0 to 2
+                    for q in range(0, 6):  # 0 to 5
+                        try:
+                            model_arima, error = fit_arima_model(price_data.values, p, d, q)
+                            if model_arima is not None:
+                                aic = float(model_arima.aic)
+                                bic = float(model_arima.bic)
+                                # Get fitted values from ARIMA
+                                fitted_values = model_arima.fittedvalues
+                                original_results.append({
+                                    'p': p,
+                                    'd': d, 
+                                    'q': q,
+                                    'AIC': aic,
+                                    'BIC': bic,
+                                    'model': model_arima,
+                                    'fitted_values': fitted_values
+                                })
+                        except Exception as e:
+                            continue
+        
+        if original_results:
+            # Convert to DataFrame and sort by AIC
+            original_results_df = pd.DataFrame(original_results)
+            original_results_df = original_results_df.sort_values('AIC')
             
+            st.subheader("ARIMA Model Comparison for Original Data (Sorted by AIC)")
+            # Display top 10 models
+            display_original_df = original_results_df[['p', 'd', 'q', 'AIC', 'BIC']].head(10).copy()
+            st.dataframe(display_original_df)
+            
+            # Best model
+            best_original_model_info = original_results_df.iloc[0]
+            best_original_arima_model = best_original_model_info['model']
+            fitted_original_values = best_original_model_info['fitted_values']
+            
+            st.subheader("Best ARIMA Model for Original Stock Data")
+            st.write(f"**ARIMA({best_original_model_info['p']},{best_original_model_info['d']},{best_original_model_info['q']})**")
+            st.write(f"**AIC:** {best_original_model_info['AIC']:.2f}")
+            st.write(f"**BIC:** {best_original_model_info['BIC']:.2f}")
+            
+            # Plot Fitted vs Actual Original Data
+            st.subheader("ARIMA: Fitted vs Actual Stock Prices")
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Plot actual prices
+            ax.plot(price_data.index, price_data.values, label='Actual Prices', linewidth=2, alpha=0.7)
+            
+            # Plot fitted values (ARIMA predictions)
+            # Note: fitted_values might be shorter due to differencing
+            start_idx = len(price_data) - len(fitted_original_values)
+            ax.plot(price_data.index[start_idx:], fitted_original_values, 
+                   label='ARIMA Fitted Values', linewidth=2, linestyle='--')
+            
+            ax.set_xlabel('Date')
+            ax.set_ylabel(f'Price ({currency_symbol})')
+            ax.set_title(f'ARIMA({best_original_model_info["p"]},{best_original_model_info["d"]},{best_original_model_info["q"]}): Fitted vs Actual Prices')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # ARIMA Forecast for next 5 days on Original Data
+            st.subheader("ARIMA Forecast for Next 5 Days (Stock Prices)")
+            
+            # Forecast next 5 days
+            forecast_steps = 5
+            arima_forecast_original = best_original_arima_model.get_forecast(steps=forecast_steps)
+            price_forecast = arima_forecast_original.predicted_mean
+            price_ci = arima_forecast_original.conf_int()
+            
+            # Handle confidence intervals
+            if hasattr(price_ci, 'iloc'):
+                price_ci_lower = price_ci.iloc[:, 0].values
+                price_ci_upper = price_ci.iloc[:, 1].values
+            else:
+                price_ci_lower = price_ci[:, 0]
+                price_ci_upper = price_ci[:, 1]
+            
+            # Generate future dates
+            last_date = price_data.index[-1]
+            future_dates_original = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
+            
+            # Display forecasted values
+            st.subheader("🎯 5-Day Stock Price Forecast")
+            
+            # Forecast table
+            st.write("**Forecasted Stock Prices:**")
+            forecast_original_data = []
+            for i in range(forecast_steps):
+                forecast_value = float(price_forecast[i])
+                ci_lower_val = float(price_ci_lower[i])
+                ci_upper_val = float(price_ci_upper[i])
+                forecast_original_data.append({
+                    'Day': i + 1,
+                    'Date': future_dates_original[i].strftime('%Y-%m-%d'),
+                    f'Forecasted_Price ({currency_symbol})': f"{forecast_value:.2f}",
+                    'CI_Lower': f"{ci_lower_val:.2f}",
+                    'CI_Upper': f"{ci_upper_val:.2f}"
+                })
+            
+            forecast_original_df = pd.DataFrame(forecast_original_data)
+            st.dataframe(forecast_original_df)
+            
+            # Plot ARIMA forecast for original data
+            st.subheader("📈 Stock Price Forecast Visualization")
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Plot historical prices (last 60 points for clarity)
+            plot_points = min(60, len(price_data))
+            ax.plot(price_data.index[-plot_points:], price_data.values[-plot_points:], 
+                   label='Historical Prices', linewidth=2, color='blue')
+            
+            # Plot forecast
+            forecast_scalar = [float(x) for x in price_forecast]
+            ci_lower_scalar = [float(x) for x in price_ci_lower]
+            ci_upper_scalar = [float(x) for x in price_ci_upper]
+            
+            ax.plot(future_dates_original, forecast_scalar, label='ARIMA Forecast', 
+                   linewidth=3, color='red', marker='o', markersize=8)
+            ax.fill_between(future_dates_original, ci_lower_scalar, ci_upper_scalar, 
+                          color='pink', alpha=0.3, label='95% Confidence Interval')
+            
+            ax.set_xlabel('Date')
+            ax.set_ylabel(f'Price ({currency_symbol})')
+            ax.set_title(f'ARIMA({best_original_model_info["p"]},{best_original_model_info["d"]},{best_original_model_info["q"]}): 5-Day Stock Price Forecast')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+
+            # ARIMA Residuals Analysis for Original Data
+            st.header("ARIMA Residuals Analysis for Original Stock Data")
+            
+            # Get residuals from the best ARIMA model
+            arima_residuals = best_original_arima_model.resid
+            # Remove NaN values that might occur due to differencing
+            arima_residuals_clean = arima_residuals.dropna()
+            
+            # Residuals time plot
+            st.subheader("ARIMA Residuals Time Series")
+            fig, ax = plt.subplots(figsize=(12, 4))
+            ax.plot(price_data.index[len(price_data) - len(arima_residuals_clean):], arima_residuals_clean, 
+                   label='ARIMA Residuals', linewidth=1)
+            ax.axhline(0, linestyle='--', color='k')
+            ax.set_xlabel('Date')
+            ax.set_ylabel(f'Residual ({currency_symbol})')
+            ax.set_title('ARIMA Model Residuals Over Time')
+            ax.legend()
+            ax.grid(alpha=0.3)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # ACF and PACF of ARIMA residuals
+            st.subheader("ACF and PACF of ARIMA Residuals")
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+            plot_acf(arima_residuals_clean, ax=ax1, lags=20)
+            ax1.set_title("Autocorrelation Function (ACF) - ARIMA Residuals")
+            plot_pacf(arima_residuals_clean, ax=ax2, lags=20)
+            ax2.set_title("Partial Autocorrelation Function (PACF) - ARIMA Residuals")
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Statistical Tests on ARIMA Residuals
+            st.subheader("Statistical Tests on ARIMA Residuals")
+            
+            # ADF Test for ARIMA Residuals
+            adf_stat_arima, adf_p_arima, adf_err_arima = safe_adfuller(arima_residuals_clean)
+            
+            if adf_err_arima:
+                st.error(f"ADF test error: {adf_err_arima}")
+            else:
+                st.write(f"**ADF Test Statistic:** {adf_stat_arima:.6f}")
+                st.write(f"**ADF p-value:** {adf_p_arima:.6f}")
+                
+                if adf_p_arima <= 0.05:
+                    st.success("✓ ARIMA Residuals are Stationary (p-value ≤ 0.05)")
+                else:
+                    st.error("✗ ARIMA Residuals are Non-Stationary (p-value > 0.05)")
+            
+            # ARIMA Residuals Histogram
+            st.subheader("ARIMA Residuals Distribution")
+            
+            # Calculate statistics
+            arima_residual_skew = float(skew(arima_residuals_clean))
+            arima_residual_kurtosis = float(kurtosis(arima_residuals_clean))
+            arima_residual_mean = float(np.mean(arima_residuals_clean))
+            arima_residual_std = float(np.std(arima_residuals_clean))
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Mean", f"{arima_residual_mean:.6f}")
+            with col2:
+                st.metric("Std Dev", f"{arima_residual_std:.6f}")
+            with col3:
+                st.metric("Skewness", f"{arima_residual_skew:.4f}")
+            with col4:
+                st.metric("Kurtosis", f"{arima_residual_kurtosis:.4f}")
+            
+            # Plot histogram
+            fig, ax = plt.subplots(figsize=(10, 6))
+            n_bins_arima, bins_arima, patches_arima = ax.hist(arima_residuals_clean, bins=30, density=True, 
+                                                             alpha=0.7, color='lightgreen', edgecolor='black')
+            
+            # Add normal distribution curve for comparison
+            xmin_arima, xmax_arima = ax.get_xlim()
+            x_arima = np.linspace(xmin_arima, xmax_arima, 100)
+            p_arima = norm.pdf(x_arima, arima_residual_mean, arima_residual_std)
+            ax.plot(x_arima, p_arima, 'k', linewidth=2, label='Normal Distribution')
+            
+            ax.axvline(arima_residual_mean, color='red', linestyle='--', linewidth=2, 
+                      label=f'Mean: {arima_residual_mean:.4f}')
+            ax.set_xlabel(f'Residual Value ({currency_symbol})')
+            ax.set_ylabel('Density')
+            ax.set_title('ARIMA Residuals Distribution Histogram')
+            ax.legend()
+            ax.grid(alpha=0.3)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Normality Test for ARIMA Residuals
+            st.subheader("Normality Test for ARIMA Residuals (Jarque-Bera)")
+            jb_stat_arima, jb_p_arima, jb_err_arima = safe_jarque_bera(arima_residuals_clean)
+            
+            if jb_err_arima:
+                st.error(f"Jarque-Bera test error: {jb_err_arima}")
+            else:
+                st.write(f"**Jarque-Bera Statistic:** {jb_stat_arima:.4f}")
+                st.write(f"**Jarque-Bera p-value:** {jb_p_arima:.4f}")
+                
+                if jb_p_arima > 0.05:
+                    st.success("✓ ARIMA Residuals are Normally Distributed (p-value > 0.05)")
+                else:
+                    st.error("✗ ARIMA Residuals are NOT Normally Distributed (p-value ≤ 0.05)")
+
+            # Autocorrelation Test for ARIMA Residuals (Ljung-Box)
+            st.subheader("Autocorrelation Test for ARIMA Residuals (Ljung-Box)")
+            lb_stat_arima, lb_p_arima, lb_err_arima = safe_ljungbox(arima_residuals_clean, max_lag=10)
+            
+            if lb_err_arima:
+                st.error(f"Ljung-Box test error: {lb_err_arima}")
+            else:
+                st.write(f"**Ljung-Box Statistic:** {lb_stat_arima:.4f}")
+                st.write(f"**Ljung-Box p-value:** {lb_p_arima:.4f}")
+                
+                if lb_p_arima > 0.05:
+                    st.success("✓ No Significant Autocorrelation in ARIMA Residuals (p-value > 0.05)")
+                else:
+                    st.error("✗ Significant Autocorrelation Present in ARIMA Residuals (p-value ≤ 0.05)")
+            
+            # Model Summary
+            st.subheader("ARIMA Model Summary")
+            st.write("A well-fitting ARIMA model should have:")
+            st.write("✓ Stationary residuals (ADF test p-value ≤ 0.05)")
+            st.write("✓ No significant autocorrelation in residuals (Ljung-Box p-value > 0.05)") 
+            st.write("✓ Normally distributed residuals (Jarque-Bera p-value > 0.05)")
+            
+            # Check model quality
+            quality_checks = []
+            if adf_p_arima <= 0.05:
+                quality_checks.append("✓ Residuals are stationary")
+            else:
+                quality_checks.append("✗ Residuals are not stationary")
+                
+            if lb_p_arima > 0.05:
+                quality_checks.append("✓ No significant autocorrelation")
+            else:
+                quality_checks.append("✗ Significant autocorrelation present")
+                
+            if jb_p_arima > 0.05:
+                quality_checks.append("✓ Residuals are normally distributed")
+            else:
+                quality_checks.append("✗ Residuals are not normally distributed")
+            
+            st.write("**Model Quality Assessment:**")
+            for check in quality_checks:
+                st.write(check)
+                
+        else:
+            st.error("No valid ARIMA models could be fitted to the original data. Try different parameter ranges.")
+
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
-        st.info("Try a smaller degree, shorter date range, or different ticker.")
+        st.info("Try a smaller degree, shorter date range, or different ticker.")          
