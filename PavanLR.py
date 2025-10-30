@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
 from statsmodels.tsa.stattools import kpss, adfuller
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -26,7 +28,7 @@ ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 # Calendar date selection
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    start_date = st.date_input("Start Date", datetime.now() - timedelta(days=180))
+    start_date = st.date_input("Start Date", datetime(2008, 1, 1))
 with col2:
     end_date = st.date_input("End Date", datetime.now())
 
@@ -34,6 +36,13 @@ with col2:
 price_type = st.sidebar.selectbox("Select Price Type", ["High", "Low", "Open", "Close", "Adj Close"])
 degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 run_btn = st.sidebar.button("Run Analysis")
+
+# ARIMA parameters
+st.sidebar.header("ARIMA Parameters")
+p_range = st.sidebar.slider("P (AR) Range", 0, 5, (0, 2))
+q_range = st.sidebar.slider("Q (MA) Range", 0, 5, (0, 2))
+d_range = st.sidebar.slider("D (Differencing) Range", 0, 2, (0, 1))
+run_arima_btn = st.sidebar.button("Run ARIMA Analysis")
 
 # Function to detect currency based on ticker
 def detect_currency(ticker):
@@ -100,6 +109,20 @@ def safe_adfuller(data):
     except Exception as ex:
         return None, None, str(ex)
 
+def fit_arima_model(data, p, d, q):
+    try:
+        model = SARIMAX(data, order=(p, d, q), seasonal_order=(0, 0, 0, 0))
+        fitted_model = model.fit(disp=False)
+        return fitted_model, None
+    except Exception as ex:
+        return None, str(ex)
+
+# Global variables to store data for ARIMA analysis
+if 'price_data' not in st.session_state:
+    st.session_state.price_data = None
+if 'residuals' not in st.session_state:
+    st.session_state.residuals = None
+
 if run_btn:
     st.header(f"Analysis for {ticker}")
     
@@ -122,6 +145,9 @@ if run_btn:
         if n < 10:
             st.error(f"Not enough data points ({n}). Increase date range or pick another ticker.")
             st.stop()
+
+        # Store data for ARIMA analysis
+        st.session_state.price_data = price_data
 
         # KPSS Test on original data (before modeling)
         st.subheader("KPSS Test - Stationarity Check (Original Data)")
@@ -207,6 +233,8 @@ if run_btn:
 
         # Residuals
         residuals = y - y_pred
+        st.session_state.residuals = residuals
+        
         st.subheader("Residual Analysis")
 
         # Residual time plot
@@ -229,6 +257,16 @@ if run_btn:
         ax.set_xlabel(f"Residual Value ({currency_symbol})")
         ax.set_ylabel("Frequency")
         ax.grid(alpha=0.3)
+        plt.tight_layout()
+        st.pyplot(fig)
+
+        # ACF and PACF plots for residuals
+        st.subheader("ACF and PACF Plots for Residuals")
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+        plot_acf(residuals, ax=ax1, lags=20)
+        ax1.set_title("Autocorrelation Function (ACF)")
+        plot_pacf(residuals, ax=ax2, lags=20)
+        ax2.set_title("Partial Autocorrelation Function (PACF)")
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -347,3 +385,85 @@ if run_btn:
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
         st.info("Try a smaller degree, shorter date range, or different ticker.")
+
+# ARIMA Analysis
+if run_arima_btn:
+    if st.session_state.price_data is None:
+        st.error("Please run the polynomial regression analysis first to load the data.")
+    else:
+        st.header("ARIMA Model Analysis")
+        price_data = st.session_state.price_data
+        
+        # Auto-detect currency
+        currency_symbol = detect_currency(ticker)
+        
+        st.write(f"**ARIMA Parameters Range:**")
+        st.write(f"- P (AR): {p_range[0]} to {p_range[1]}")
+        st.write(f"- D (Differencing): {d_range[0]} to {d_range[1]}")
+        st.write(f"- Q (MA): {q_range[0]} to {q_range[1]}")
+        
+        results = []
+        with st.spinner("Fitting ARIMA models..."):
+            for p in range(p_range[0], p_range[1] + 1):
+                for d in range(d_range[0], d_range[1] + 1):
+                    for q in range(q_range[0], q_range[1] + 1):
+                        try:
+                            model, error = fit_arima_model(price_data, p, d, q)
+                            if model is not None:
+                                aic = model.aic
+                                bic = model.bic
+                                results.append({
+                                    'p': p,
+                                    'd': d, 
+                                    'q': q,
+                                    'AIC': aic,
+                                    'BIC': bic
+                                })
+                        except:
+                            continue
+        
+        if results:
+            # Convert to DataFrame and sort by AIC
+            results_df = pd.DataFrame(results)
+            results_df = results_df.sort_values('AIC')
+            
+            st.subheader("ARIMA Model Comparison (Sorted by AIC)")
+            st.dataframe(results_df)
+            
+            # Best model
+            best_model = results_df.iloc[0]
+            st.subheader("Best ARIMA Model")
+            st.write(f"**ARIMA({best_model['p']},{best_model['d']},{best_model['q']})**")
+            st.write(f"**AIC:** {best_model['AIC']:.2f}")
+            st.write(f"**BIC:** {best_model['BIC']:.2f}")
+            
+            # Fit and display the best model
+            best_model_fit, error = fit_arima_model(price_data, int(best_model['p']), int(best_model['d']), int(best_model['q']))
+            if best_model_fit:
+                st.subheader("Best Model Summary")
+                st.text(str(best_model_fit.summary()))
+                
+                # Forecast
+                st.subheader("ARIMA Forecast")
+                forecast_steps = st.slider("Forecast Steps", 1, 100, 30)
+                forecast = best_model_fit.get_forecast(steps=forecast_steps)
+                forecast_mean = forecast.predicted_mean
+                forecast_ci = forecast.conf_int()
+                
+                # Plot forecast
+                fig, ax = plt.subplots(figsize=(12, 6))
+                ax.plot(price_data.index, price_data.values, label='Historical Data')
+                last_date = price_data.index[-1]
+                future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=forecast_steps, freq='D')
+                ax.plot(future_dates, forecast_mean, label='Forecast', color='red')
+                ax.fill_between(future_dates, forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1], color='pink', alpha=0.3)
+                ax.set_xlabel('Date')
+                ax.set_ylabel(f'Price ({currency_symbol})')
+                ax.set_title(f'ARIMA({best_model["p"]},{best_model["d"]},{best_model["q"]}) Forecast')
+                ax.legend()
+                ax.grid(True, alpha=0.3)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                st.pyplot(fig)
+        else:
+            st.error("No ARIMA models could be fitted with the selected parameters.")
