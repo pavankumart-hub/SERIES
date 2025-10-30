@@ -131,19 +131,14 @@ if run_btn:
         plt.tight_layout()
         st.pyplot(fig)
 
-        # Residual histogram + QQ-plot
-        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-
-        # Histogram
-        axes[0].hist(residuals, bins=30, alpha=0.7, edgecolor='black')
-        axes[0].set_title("Residual Histogram")
-        axes[0].set_xlabel("Residual Value")
-        axes[0].set_ylabel("Frequency")
-
-        # QQ-plot
-        sm.qqplot(residuals, line='45', ax=axes[1])
-        axes[1].set_title("Q-Q Plot of Residuals")
-
+        # Residual histogram only (QQ plot removed)
+        st.subheader("Residual Distribution")
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.hist(residuals, bins=30, alpha=0.7, edgecolor='black')
+        ax.set_title("Residual Histogram")
+        ax.set_xlabel("Residual Value")
+        ax.set_ylabel("Frequency")
+        ax.grid(alpha=0.3)
         plt.tight_layout()
         st.pyplot(fig)
 
