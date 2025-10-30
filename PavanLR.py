@@ -137,11 +137,11 @@ if run_btn:
             st.write("**Critical Values:**")
             st.write(f"5% Critical Value: {kpss_critical_values['5%']:.4f}")
 
-# Interpretation using only 5% critical value
+            # Interpretation using only 5% critical value
             if kpss_stat > kpss_critical_values['5%']:
-            st.error("✗ Data is Difference-stationary (test statistic > 5% critical value)")
+                st.error("✗ Data is Difference-stationary (test statistic > 5% critical value)")
             else:
-            st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
+                st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
                     
         st.info("""
         **KPSS Test Interpretation:**
