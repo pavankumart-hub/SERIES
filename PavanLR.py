@@ -154,10 +154,11 @@ if run_analysis_btn:
             else:
                 st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
 
-        # show basics
+        # show basics - FIXED: Extract scalar values for metrics
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric(f"Current {price_type} Price", f"{currency_symbol}{float(price_data.iloc[-1]):.2f}")
+            current_price = float(price_data.iloc[-1])
+            st.metric(f"Current {price_type} Price", f"{currency_symbol}{current_price:.2f}")
         with col2:
             st.metric("Data Points", n)
         with col3:
@@ -184,9 +185,9 @@ if run_analysis_btn:
         model.fit(X_poly, y)
         y_pred = model.predict(X_poly)
 
-        # Metrics
-        rmse = np.sqrt(mean_squared_error(y, y_pred))
-        r2 = r2_score(y, y_pred)
+        # Metrics - FIXED: Ensure we're using scalar values
+        rmse = float(np.sqrt(mean_squared_error(y, y_pred)))
+        r2 = float(r2_score(y, y_pred))
 
         st.subheader("Polynomial Model Performance")
         c1, c2 = st.columns(2)
@@ -253,11 +254,11 @@ if run_analysis_btn:
         # Residual Histogram with Skewness and Kurtosis
         st.subheader("Residual Distribution Analysis")
         
-        # Calculate statistics
-        residual_skew = skew(residuals)
-        residual_kurtosis = kurtosis(residuals)
-        residual_mean = np.mean(residuals)
-        residual_std = np.std(residuals)
+        # Calculate statistics - FIXED: Ensure scalar values
+        residual_skew = float(skew(residuals))
+        residual_kurtosis = float(kurtosis(residuals))
+        residual_mean = float(np.mean(residuals))
+        residual_std = float(np.std(residuals))
         
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -271,7 +272,7 @@ if run_analysis_btn:
         
         # Plot histogram
         fig, ax = plt.subplots(figsize=(10, 6))
-        n, bins, patches = ax.hist(residuals, bins=30, density=True, alpha=0.7, color='skyblue', edgecolor='black')
+        n_bins, bins, patches = ax.hist(residuals, bins=30, density=True, alpha=0.7, color='skyblue', edgecolor='black')
         
         # Add normal distribution curve for comparison
         from scipy.stats import norm
@@ -351,8 +352,8 @@ if run_analysis_btn:
                         try:
                             model_arima, error = fit_arima_model(residuals, p, d, q)
                             if model_arima is not None:
-                                aic = model_arima.aic
-                                bic = model_arima.bic
+                                aic = float(model_arima.aic)
+                                bic = float(model_arima.bic)
                                 # Get fitted values from ARIMA
                                 fitted_residuals = model_arima.fittedvalues
                                 results.append({
@@ -419,7 +420,7 @@ if run_analysis_btn:
             residual_forecast = arima_forecast.predicted_mean
             residual_ci = arima_forecast.conf_int()
             
-            # FIX: Properly handle confidence intervals
+            # FIX: Properly handle confidence intervals and ensure scalar values
             if hasattr(residual_ci, 'iloc'):
                 # It's a pandas DataFrame
                 residual_ci_lower = residual_ci.iloc[:, 0].values
@@ -436,21 +437,25 @@ if run_analysis_btn:
             # PRINT THE 5 FORECASTED VALUES CLEARLY
             st.subheader("🎯 5 Forecasted Residual Values")
             
-            # Method 1: Simple list
+            # Method 1: Simple list - FIXED: Extract scalar values
             st.write("**Forecasted Values:**")
             for i in range(forecast_steps):
-                st.write(f"Day {i+1} ({future_dates[i].strftime('%Y-%m-%d')}): {currency_symbol}{residual_forecast[i]:.6f}")
+                forecast_value = float(residual_forecast[i])
+                st.write(f"Day {i+1} ({future_dates[i].strftime('%Y-%m-%d')}): {currency_symbol}{forecast_value:.6f}")
             
-            # Method 2: Table
+            # Method 2: Table - FIXED: Extract scalar values
             st.subheader("📋 Forecast Table")
             forecast_data = []
             for i in range(forecast_steps):
+                forecast_value = float(residual_forecast[i])
+                ci_lower_val = float(residual_ci_lower[i])
+                ci_upper_val = float(residual_ci_upper[i])
                 forecast_data.append({
                     'Day': i + 1,
                     'Date': future_dates[i].strftime('%Y-%m-%d'),
-                    'Forecasted_Residual': f"{residual_forecast[i]:.6f}",
-                    'CI_Lower': f"{residual_ci_lower[i]:.6f}",
-                    'CI_Upper': f"{residual_ci_upper[i]:.6f}"
+                    'Forecasted_Residual': f"{forecast_value:.6f}",
+                    'CI_Lower': f"{ci_lower_val:.6f}",
+                    'CI_Upper': f"{ci_upper_val:.6f}"
                 })
             
             forecast_df = pd.DataFrame(forecast_data)
@@ -471,10 +476,14 @@ if run_analysis_btn:
             ax.plot(price_data.index[-plot_points:], residuals[-plot_points:], 
                    label='Historical Residuals', linewidth=2, color='blue')
             
-            # Plot forecast
-            ax.plot(future_dates, residual_forecast, label='ARIMA Forecast', 
+            # Plot forecast - FIXED: Ensure we're plotting scalar values
+            forecast_scalar = [float(x) for x in residual_forecast]
+            ci_lower_scalar = [float(x) for x in residual_ci_lower]
+            ci_upper_scalar = [float(x) for x in residual_ci_upper]
+            
+            ax.plot(future_dates, forecast_scalar, label='ARIMA Forecast', 
                    linewidth=3, color='red', marker='o', markersize=8)
-            ax.fill_between(future_dates, residual_ci_lower, residual_ci_upper, 
+            ax.fill_between(future_dates, ci_lower_scalar, ci_upper_scalar, 
                           color='pink', alpha=0.3, label='95% Confidence Interval')
             
             ax.axhline(0, linestyle='-', color='k', alpha=0.3)
