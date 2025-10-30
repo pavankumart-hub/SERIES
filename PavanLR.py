@@ -316,37 +316,19 @@ if run_analysis_btn:
             residual_forecast = arima_forecast.predicted_mean
             residual_ci = arima_forecast.conf_int()
             
-            # Convert confidence intervals to numpy arrays
-            residual_ci_lower = residual_ci.iloc[:, 0].values
-            residual_ci_upper = residual_ci.iloc[:, 1].values
+            # FIX: Properly handle confidence intervals
+            if hasattr(residual_ci, 'iloc'):
+                # It's a pandas DataFrame
+                residual_ci_lower = residual_ci.iloc[:, 0].values
+                residual_ci_upper = residual_ci.iloc[:, 1].values
+            else:
+                # It's already a numpy array
+                residual_ci_lower = residual_ci[:, 0]
+                residual_ci_upper = residual_ci[:, 1]
             
             # Generate future dates
             last_date = price_data.index[-1]
             future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
-            
-            # Plot ARIMA forecast
-            fig, ax = plt.subplots(figsize=(12, 6))
-            
-            # Plot historical residuals (last 50 points for clarity)
-            plot_points = min(50, len(residuals))
-            ax.plot(price_data.index[-plot_points:], residuals[-plot_points:], 
-                   label='Historical Residuals', linewidth=2, color='blue')
-            
-            # Plot forecast
-            ax.plot(future_dates, residual_forecast, label='ARIMA Forecast', 
-                   linewidth=3, color='red', marker='o', markersize=8)
-            ax.fill_between(future_dates, residual_ci_lower, residual_ci_upper, 
-                          color='pink', alpha=0.3, label='95% Confidence Interval')
-            
-            ax.axhline(0, linestyle='-', color='k', alpha=0.3)
-            ax.set_xlabel('Date')
-            ax.set_ylabel(f'Residual Value ({currency_symbol})')
-            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): 5-Day Residual Forecast')
-            ax.legend()
-            ax.grid(True, alpha=0.3)
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            st.pyplot(fig)
             
             # PRINT THE 5 FORECASTED VALUES CLEARLY
             st.subheader("🎯 5 Forecasted Residual Values")
@@ -371,10 +353,36 @@ if run_analysis_btn:
             forecast_df = pd.DataFrame(forecast_data)
             st.dataframe(forecast_df)
             
-            # Method 3: Raw values
-            st.subheader("🔢 Raw Forecast Values")
+            # Method 3: Raw values for verification
+            st.subheader("🔢 Raw Forecast Values (Verification)")
             st.write(f"**Forecast array:** {residual_forecast}")
             st.write(f"**Data type:** {type(residual_forecast)}")
+            st.write(f"**Array length:** {len(residual_forecast)}")
+            
+            # Plot ARIMA forecast (optional)
+            st.subheader("📈 Forecast Visualization")
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Plot historical residuals (last 30 points for clarity)
+            plot_points = min(30, len(residuals))
+            ax.plot(price_data.index[-plot_points:], residuals[-plot_points:], 
+                   label='Historical Residuals', linewidth=2, color='blue')
+            
+            # Plot forecast
+            ax.plot(future_dates, residual_forecast, label='ARIMA Forecast', 
+                   linewidth=3, color='red', marker='o', markersize=8)
+            ax.fill_between(future_dates, residual_ci_lower, residual_ci_upper, 
+                          color='pink', alpha=0.3, label='95% Confidence Interval')
+            
+            ax.axhline(0, linestyle='-', color='k', alpha=0.3)
+            ax.set_xlabel('Date')
+            ax.set_ylabel(f'Residual Value ({currency_symbol})')
+            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): 5-Day Residual Forecast')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
             
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
