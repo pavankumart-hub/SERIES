@@ -232,6 +232,109 @@ if run_analysis_btn:
         plt.tight_layout()
         st.pyplot(fig)
 
+        # NEW: Residual Statistical Tests before ARIMA
+        st.header("Residual Statistical Tests")
+        
+        # ADF Test for Residuals
+        st.subheader("ADF Test - Stationarity Check (Residuals)")
+        adf_stat, adf_p, adf_err = safe_adfuller(residuals)
+        
+        if adf_err:
+            st.error(f"ADF test error: {adf_err}")
+        else:
+            st.write(f"**ADF Test Statistic:** {adf_stat:.6f}")
+            st.write(f"**ADF p-value:** {adf_p:.6f}")
+            
+            if adf_p <= 0.05:
+                st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
+            else:
+                st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
+        
+        # Residual Histogram with Skewness and Kurtosis
+        st.subheader("Residual Distribution Analysis")
+        
+        # Calculate statistics
+        residual_skew = skew(residuals)
+        residual_kurtosis = kurtosis(residuals)
+        residual_mean = np.mean(residuals)
+        residual_std = np.std(residuals)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Mean", f"{residual_mean:.6f}")
+        with col2:
+            st.metric("Std Dev", f"{residual_std:.6f}")
+        with col3:
+            st.metric("Skewness", f"{residual_skew:.4f}")
+        with col4:
+            st.metric("Kurtosis", f"{residual_kurtosis:.4f}")
+        
+        # Plot histogram
+        fig, ax = plt.subplots(figsize=(10, 6))
+        n, bins, patches = ax.hist(residuals, bins=30, density=True, alpha=0.7, color='skyblue', edgecolor='black')
+        
+        # Add normal distribution curve for comparison
+        from scipy.stats import norm
+        xmin, xmax = ax.get_xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, residual_mean, residual_std)
+        ax.plot(x, p, 'k', linewidth=2, label='Normal Distribution')
+        
+        ax.axvline(residual_mean, color='red', linestyle='--', linewidth=2, label=f'Mean: {residual_mean:.4f}')
+        ax.set_xlabel(f'Residual Value ({currency_symbol})')
+        ax.set_ylabel('Density')
+        ax.set_title('Residual Distribution Histogram')
+        ax.legend()
+        ax.grid(alpha=0.3)
+        plt.tight_layout()
+        st.pyplot(fig)
+        
+        # Interpret skewness and kurtosis
+        st.write("**Distribution Interpretation:**")
+        if abs(residual_skew) < 0.5:
+            st.write("✓ Skewness: Approximately symmetric (close to 0)")
+        elif residual_skew > 0.5:
+            st.write("↗️ Skewness: Right-skewed (positive skew)")
+        else:
+            st.write("↙️ Skewness: Left-skewed (negative skew)")
+            
+        if abs(residual_kurtosis) < 1:
+            st.write("✓ Kurtosis: Approximately normal (close to 0)")
+        elif residual_kurtosis > 1:
+            st.write("📈 Kurtosis: Leptokurtic (heavy-tailed)")
+        else:
+            st.write("📉 Kurtosis: Platykurtic (light-tailed)")
+
+        # Normality Test
+        st.subheader("Normality Test (Jarque-Bera)")
+        jb_stat, jb_p, jb_err = safe_jarque_bera(residuals)
+        
+        if jb_err:
+            st.error(f"Jarque-Bera test error: {jb_err}")
+        else:
+            st.write(f"**Jarque-Bera Statistic:** {jb_stat:.4f}")
+            st.write(f"**Jarque-Bera p-value:** {jb_p:.4f}")
+            
+            if jb_p > 0.05:
+                st.success("✓ Residuals are Normally Distributed (p-value > 0.05)")
+            else:
+                st.error("✗ Residuals are NOT Normally Distributed (p-value ≤ 0.05)")
+
+        # Autocorrelation Test (Ljung-Box)
+        st.subheader("Autocorrelation Test (Ljung-Box)")
+        lb_stat, lb_p, lb_err = safe_ljungbox(residuals, max_lag=10)
+        
+        if lb_err:
+            st.error(f"Ljung-Box test error: {lb_err}")
+        else:
+            st.write(f"**Ljung-Box Statistic:** {lb_stat:.4f}")
+            st.write(f"**Ljung-Box p-value:** {lb_p:.4f}")
+            
+            if lb_p > 0.05:
+                st.success("✓ No Significant Autocorrelation (p-value > 0.05)")
+            else:
+                st.error("✗ Significant Autocorrelation Present (p-value ≤ 0.05)")
+
         # ARIMA Analysis on Residuals
         st.header("ARIMA Analysis on Residuals")
         
