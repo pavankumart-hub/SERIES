@@ -28,7 +28,7 @@ ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 # Calendar date selection
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    start_date = st.date_input("Start Date", datetime(2008, 1, 1))
+    start_date = st.date_input("Start Date", datetime(2020, 1, 1))  # Changed to 2020 for more data
 with col2:
     end_date = st.date_input("End Date", datetime.now())
 
@@ -135,8 +135,8 @@ if run_analysis_btn:
         price_data = data[price_type].copy()
         price_data = price_data.dropna()
         n = len(price_data)
-        if n < 10:
-            st.error(f"Not enough data points ({n}). Increase date range or pick another ticker.")
+        if n < 20:  # Increased minimum data points
+            st.error(f"Not enough data points ({n}). Need at least 20 points. Increase date range or pick another ticker.")
             st.stop()
 
         # KPSS Test on original data
@@ -170,19 +170,32 @@ if run_analysis_btn:
         dates_max = float(dates.max(axis=0)[0])
         dates_min = float(dates.min(axis=0)[0])
         dates_range = dates_max - dates_min
+        
+        # Check if dates are identical (this causes the error)
         if dates_range == 0:
-            st.error("All dates identical (unexpected).")
+            st.error("All dates are identical. This usually happens with very short date ranges or when there's only one trading day. Please select a longer date range.")
             st.stop()
+        
+        # Check if we have enough unique dates for polynomial regression
+        unique_dates = len(np.unique(dates))
+        if unique_dates < degree + 1:
+            st.error(f"Not enough unique dates ({unique_dates}) for polynomial degree {degree}. Need at least {degree + 1} unique dates. Reduce polynomial degree or increase date range.")
+            st.stop()
+            
         X = (dates - dates_mean) / dates_range
 
         y = price_data.values.astype(float)
 
-        # Build polynomial features and fit model
-        poly = PolynomialFeatures(degree=degree, include_bias=False)
-        X_poly = poly.fit_transform(X)
-        model = LinearRegression()
-        model.fit(X_poly, y)
-        y_pred = model.predict(X_poly)
+        # Build polynomial features and fit model with error handling
+        try:
+            poly = PolynomialFeatures(degree=degree, include_bias=False)
+            X_poly = poly.fit_transform(X)
+            model = LinearRegression()
+            model.fit(X_poly, y)
+            y_pred = model.predict(X_poly)
+        except Exception as e:
+            st.error(f"Polynomial regression failed: {str(e)}. Try reducing the polynomial degree or increasing the date range.")
+            st.stop()
 
         # Metrics
         rmse = np.sqrt(mean_squared_error(y, y_pred))
@@ -322,9 +335,9 @@ if run_analysis_btn:
         # ACF and PACF plots for residuals
         st.subheader("ACF and PACF Plots for Residuals")
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-        plot_acf(residuals, ax=ax1, lags=20)
+        plot_acf(residuals, ax=ax1, lags=min(20, len(residuals)//2))
         ax1.set_title("Autocorrelation Function (ACF)")
-        plot_pacf(residuals, ax=ax2, lags=20)
+        plot_pacf(residuals, ax=ax2, lags=min(20, len(residuals)//2))
         ax2.set_title("Partial Autocorrelation Function (PACF)")
         plt.tight_layout()
         st.pyplot(fig)
