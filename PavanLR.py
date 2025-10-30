@@ -132,9 +132,19 @@ if run_btn:
         st.pyplot(fig)
 
         # Residual histogram + QQ-plot
-        fig=plt.(figsize=(12, 4))
-        hist(residuals, bins=30, alpha=0.9)
-        set_title("Residual Histogram")
+        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+        # Histogram
+        axes[0].hist(residuals, bins=30, alpha=0.7, edgecolor='black')
+        axes[0].set_title("Residual Histogram")
+        axes[0].set_xlabel("Residual Value")
+        axes[0].set_ylabel("Frequency")
+
+        # QQ-plot
+        sm.qqplot(residuals, line='45', ax=axes[1])
+        axes[1].set_title("Q-Q Plot of Residuals")
+
+        plt.tight_layout()
         st.pyplot(fig)
 
         # Diagnostics: Ljung-Box and Jarque-Bera (safe wrappers)
