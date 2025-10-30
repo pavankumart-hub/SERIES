@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
-import statsmodels.api as sm
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -150,22 +149,24 @@ if run_btn:
         st.subheader("Residual Distribution Statistics")
         col_skew, col_kurt = st.columns(2)
         with col_skew:
-            st.metric("Skewness", f"{residual_skew:.4f}")
+            st.write(f"**Skewness:** {residual_skew:.6f}")
+            st.write(f"**Interpretation:**")
             if abs(residual_skew) < 0.5:
-                st.success("✓ Near symmetric (good)")
+                st.write("✓ Near symmetric (good)")
             elif abs(residual_skew) < 1.0:
-                st.warning("∼ Moderately skewed")
+                st.write("∼ Moderately skewed")
             else:
-                st.error("✗ Highly skewed")
+                st.write("✗ Highly skewed")
                 
         with col_kurt:
-            st.metric("Kurtosis", f"{residual_kurtosis:.4f}")
+            st.write(f"**Kurtosis:** {residual_kurtosis:.6f}")
+            st.write(f"**Interpretation:**")
             if abs(residual_kurtosis) < 0.5:
-                st.success("✓ Near normal kurtosis (good)")
+                st.write("✓ Near normal kurtosis (good)")
             elif abs(residual_kurtosis) < 1.0:
-                st.warning("∼ Moderate deviation from normal")
+                st.write("∼ Moderate deviation from normal")
             else:
-                st.error("✗ Heavy-tailed or light-tailed")
+                st.write("✗ Heavy-tailed or light-tailed")
 
         # Diagnostics: Ljung-Box and Jarque-Bera (safe wrappers)
         st.subheader("Residual Diagnostics (statistical tests)")
@@ -173,19 +174,32 @@ if run_btn:
         lb_stat, lb_p, lb_err = safe_ljungbox(residuals, max_lag=10)
         jb_stat, jb_p, jb_err = safe_jarque_bera(residuals)
 
+        st.write("**Statistical Test Results:**")
+        
         dcol1, dcol2 = st.columns(2)
         with dcol1:
             if lb_err:
                 st.error(f"Ljung–Box test error: {lb_err}")
             else:
-                st.metric("Ljung–Box p-value (no autocorr if > 0.05)", f"{lb_p:.4f}")
-                st.write(f"Statistic = {lb_stat:.4f}")
+                st.write(f"**Ljung–Box Test:**")
+                st.write(f"Statistic: {lb_stat:.6f}")
+                st.write(f"p-value: {lb_p:.6f}")
+                if lb_p > 0.05:
+                    st.success("✓ No significant autocorrelation (p > 0.05)")
+                else:
+                    st.error("✗ Significant autocorrelation detected (p ≤ 0.05)")
+                    
         with dcol2:
             if jb_err:
                 st.error(f"Jarque–Bera test error: {jb_err}")
             else:
-                st.metric("Jarque–Bera p-value (normal if > 0.05)", f"{jb_p:.4f}")
-                st.write(f"Statistic = {jb_stat:.4f}")
+                st.write(f"**Jarque–Bera Test:**")
+                st.write(f"Statistic: {jb_stat:.6f}")
+                st.write(f"p-value: {jb_p:.6f}")
+                if jb_p > 0.05:
+                    st.success("✓ Residuals appear normal (p > 0.05)")
+                else:
+                    st.error("✗ Residuals not normal (p ≤ 0.05)")
 
         # Additional helpful debug info (only if user wants)
         if st.checkbox("Show model debug info (coefficients & poly powers)"):
