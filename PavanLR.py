@@ -77,9 +77,11 @@ if run_btn:
 
         # Prepare X: center + scale ordinal dates to range ~ [-0.5, 0.5]
         dates = np.array([d.toordinal() for d in high.index]).reshape(-1, 1).astype(float)
-        # center
-        dates_mean = dates.mean(axis=0)
-        dates_range = (dates.max(axis=0) - dates.min(axis=0))[0]
+        # center - extract scalar values from arrays
+        dates_mean = float(dates.mean(axis=0)[0])  # Convert to scalar
+        dates_max = float(dates.max(axis=0)[0])
+        dates_min = float(dates.min(axis=0)[0])
+        dates_range = dates_max - dates_min
         if dates_range == 0:
             st.error("All dates identical (unexpected).")
             st.stop()
@@ -142,8 +144,8 @@ if run_btn:
         st.pyplot(fig)
 
         # Calculate skewness and kurtosis
-        residual_skew = skew(residuals)
-        residual_kurtosis = kurtosis(residuals, fisher=True)  # Fisher's definition (normal = 0)
+        residual_skew = float(skew(residuals))  # Ensure it's a float
+        residual_kurtosis = float(kurtosis(residuals, fisher=True))  # Ensure it's a float
         
         # Display skewness and kurtosis
         st.subheader("Residual Distribution Statistics")
@@ -229,4 +231,6 @@ if run_btn:
 
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
+        import traceback
+        st.error(f"Detailed error: {traceback.format_exc()}")
         st.info("Try a smaller degree, shorter date range, or different ticker.")
