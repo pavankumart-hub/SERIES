@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
+from statsmodels.tsa.stattools import kpss, adfuller
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -29,13 +30,22 @@ with col1:
 with col2:
     end_date = st.date_input("End Date", datetime.now())
 
-# Currency selection
-currency = st.sidebar.selectbox("Currency", ["USD ($)", "INR (₹)"])
-currency_symbol = "$" if currency == "USD ($)" else "₹"
-
-days = st.sidebar.slider("Days to Analyze", 30, 365, 180)
+# Price type selection
+price_type = st.sidebar.selectbox("Select Price Type", ["High", "Low", "Open", "Close", "Adj Close"])
 degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 run_btn = st.sidebar.button("Run Analysis")
+
+# Function to detect currency based on ticker
+def detect_currency(ticker):
+    # Indian stock indicators
+    indian_indicators = ['.NS', '.BO', '.NSE', '.BSE', 'RELIANCE', 'TCS', 'INFY', 'HDFC', 'HDFCBANK', 
+                         'ICICIBANK', 'SBIN', 'KOTAKBANK', 'AXISBANK', 'ITC', 'LT', 'BHARTIARTL']
+    
+    # Check if ticker contains Indian indicators
+    if any(indicator in ticker.upper() for indicator in indian_indicators):
+        return "₹"
+    else:
+        return "$"
 
 def safe_ljungbox(resids, max_lag=10):
     n = len(resids)
@@ -56,37 +66,73 @@ def safe_jarque_bera(resids):
     except Exception as ex:
         return None, None, str(ex)
 
+def safe_kpss(data):
+    try:
+        kpss_stat, kpss_p, kpss_lags, kpss_crit = kpss(data, regression='c')
+        return float(kpss_stat), float(kpss_p), None
+    except Exception as ex:
+        return None, None, str(ex)
+
+def safe_adfuller(data):
+    try:
+        adf_result = adfuller(data)
+        adf_stat = float(adf_result[0])
+        adf_p = float(adf_result[1])
+        return adf_stat, adf_p, None
+    except Exception as ex:
+        return None, None, str(ex)
+
 if run_btn:
     st.header(f"Analysis for {ticker}")
+    
+    # Auto-detect currency
+    currency_symbol = detect_currency(ticker)
+    st.sidebar.info(f"Detected Currency: {currency_symbol}")
 
     # download data
     try:
         with st.spinner(f"Downloading {ticker}..."):
             data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
-        if data is None or data.empty or "High" not in data.columns:
-            st.error("No data or 'High' column not found. Check ticker or date range.")
+        if data is None or data.empty or price_type not in data.columns:
+            st.error(f"No data or '{price_type}' column not found. Check ticker or date range.")
             st.stop()
 
-        high = data["High"].copy()
-        high = high.dropna()
-        n = len(high)
+        price_data = data[price_type].copy()
+        price_data = price_data.dropna()
+        n = len(price_data)
         if n < 10:
-            st.error(f"Not enough data points ({n}). Increase days or pick another ticker.")
+            st.error(f"Not enough data points ({n}). Increase date range or pick another ticker.")
             st.stop()
+
+        # KPSS Test on original data (before modeling)
+        st.subheader("KPSS Test - Stationarity Check (Original Data)")
+        kpss_stat, kpss_p, kpss_err = safe_kpss(price_data)
+        
+        if kpss_err:
+            st.error(f"KPSS test error: {kpss_err}")
+        else:
+            st.write(f"**KPSS Test Statistic:** {kpss_stat:.6f}")
+            st.write(f"**KPSS p-value:** {kpss_p:.6f}")
+            if kpss_p < 0.05:
+                st.error("✗ Data is non-stationary (p < 0.05) - Consider differencing")
+            else:
+                st.success("✓ Data appears stationary (p ≥ 0.05)")
+        
+        st.info("Note: KPSS tests the null hypothesis that the data is stationary.")
 
         # show basics
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Current High Price", f"{currency_symbol}{float(high.iloc[-1]):.2f}")
+            st.metric(f"Current {price_type} Price", f"{currency_symbol}{float(price_data.iloc[-1]):.2f}")
         with col2:
             st.metric("Data Points", n)
         with col3:
-            actual_days = (high.index[-1] - high.index[0]).days
-            st.metric("Actual Period (days)", actual_days)
+            actual_days = (price_data.index[-1] - price_data.index[0]).days
+            st.metric("Analysis Period (days)", actual_days)
 
         # Prepare X: center + scale ordinal dates to range ~ [-0.5, 0.5]
-        dates = np.array([d.toordinal() for d in high.index]).reshape(-1, 1).astype(float)
+        dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
         # center - extract scalar values from arrays
         dates_mean = float(dates.mean(axis=0)[0])  # Convert to scalar
         dates_max = float(dates.max(axis=0)[0])
@@ -97,7 +143,7 @@ if run_btn:
             st.stop()
         X = (dates - dates_mean) / dates_range  # now roughly in [-0.5, 0.5]
 
-        y = high.values.astype(float)
+        y = price_data.values.astype(float)
 
         # Build polynomial features (use include_bias=False so intercept comes from LinearRegression)
         poly = PolynomialFeatures(degree=degree, include_bias=False)
@@ -120,8 +166,8 @@ if run_btn:
         # Plot actual vs predicted (sorted by date to avoid line crossing)
         st.subheader(f"Actual vs Predicted (Degree = {degree})")
         fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(high.index, y, label="Actual High", linewidth=2)
-        ax.plot(high.index, y_pred, label="Predicted", linestyle="--", linewidth=2)
+        ax.plot(price_data.index, y, label=f"Actual {price_type}", linewidth=2)
+        ax.plot(price_data.index, y_pred, label="Predicted", linestyle="--", linewidth=2)
         ax.set_xlabel("Date")
         ax.set_ylabel(f"Price ({currency_symbol})")
         ax.legend()
@@ -136,7 +182,7 @@ if run_btn:
 
         # Residual time plot
         fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot(high.index, residuals, label="Residuals")
+        ax.plot(price_data.index, residuals, label="Residuals")
         ax.axhline(0, linestyle="--", color="k")
         ax.set_xlabel("Date")
         ax.set_ylabel(f"Residual ({currency_symbol})")
@@ -221,6 +267,22 @@ if run_btn:
                 else:
                     st.error("✗ Residuals not normal (p ≤ 0.05)")
 
+        # ADF Test on residuals (at the end)
+        st.subheader("ADF Test - Stationarity Check (Residuals)")
+        adf_stat, adf_p, adf_err = safe_adfuller(residuals)
+        
+        if adf_err:
+            st.error(f"ADF test error: {adf_err}")
+        else:
+            st.write(f"**ADF Test Statistic:** {adf_stat:.6f}")
+            st.write(f"**ADF p-value:** {adf_p:.6f}")
+            if adf_p < 0.05:
+                st.success("✓ Residuals are stationary (p < 0.05) - Good!")
+            else:
+                st.error("✗ Residuals are non-stationary (p ≥ 0.05) - Model may not be adequate")
+        
+        st.info("Note: ADF tests the null hypothesis that the data has a unit root (non-stationary).")
+
         # Additional helpful debug info (only if user wants)
         if st.checkbox("Show model debug info (coefficients & poly powers)"):
             st.code(f"Polynomial degree: {degree}")
@@ -233,7 +295,7 @@ if run_btn:
 
         # Next day forecast using same centering & scaling
         st.subheader("Next Day Forecast")
-        last_date = high.index[-1]
+        last_date = price_data.index[-1]
         next_date_ord = np.array([[last_date.toordinal() + 1]], dtype=float)
         next_X = (next_date_ord - dates_mean) / dates_range
         next_X_poly = poly.transform(next_X)
@@ -244,7 +306,7 @@ if run_btn:
             pcol1, pcol2 = st.columns(2)
             pcol1.metric("Next Day Prediction", f"{currency_symbol}{next_pred:.2f}", 
                         delta=f"{change:.2f} ({change_pct:.2f}%)")
-            pcol2.metric("Current High", f"{currency_symbol}{float(y[-1]):.2f}")
+            pcol2.metric(f"Current {price_type}", f"{currency_symbol}{float(y[-1]):.2f}")
         except Exception as ex:
             st.error(f"Next-day prediction failed: {ex}")
 
