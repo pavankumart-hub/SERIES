@@ -295,14 +295,19 @@ if run_analysis_btn:
                 
                 # ARIMA forecast on residuals
                 arima_forecast = best_arima_model.get_forecast(steps=forecast_days)
-                residual_forecast = arima_forecast.predicted_mean
-                residual_ci = arima_forecast.conf_int()
-                
+                residual_forecast = arima_forecast.predicted_mean  # pandas Series
+                residual_ci = arima_forecast.conf_int()  # pandas DataFrame
+
+                # Convert to numpy arrays for proper addition
+                residual_forecast_values = residual_forecast.values
+                residual_ci_lower_values = residual_ci.iloc[:, 0].values
+                residual_ci_upper_values = residual_ci.iloc[:, 1].values
+
                 # Combined forecast
-                combined_forecast = trend_forecast + residual_forecast
-                combined_ci_lower = trend_forecast + residual_ci.iloc[:, 0]
-                combined_ci_upper = trend_forecast + residual_ci.iloc[:, 1]
-                
+                combined_forecast = trend_forecast + residual_forecast_values
+                combined_ci_lower = trend_forecast + residual_ci_lower_values
+                combined_ci_upper = trend_forecast + residual_ci_upper_values
+
                 # Plot combined forecast
                 fig, ax = plt.subplots(figsize=(12, 6))
                 
@@ -328,28 +333,19 @@ if run_analysis_btn:
                 st.subheader("Forecast Details")
                 forecast_df = pd.DataFrame({
                     'Date': future_dates,
-                    'Trend_Forecast': trend_forecast,
-                    'Residual_Forecast': residual_forecast,
-                    'Combined_Forecast': combined_forecast,
-                    'CI_Lower': combined_ci_lower,
-                    'CI_Upper': combined_ci_upper
+                    f'Trend_Forecast ({currency_symbol})': trend_forecast.round(2),
+                    f'Residual_Forecast ({currency_symbol})': residual_forecast_values.round(2),
+                    f'Combined_Forecast ({currency_symbol})': combined_forecast.round(2),
+                    f'CI_Lower ({currency_symbol})': combined_ci_lower.round(2),
+                    f'CI_Upper ({currency_symbol})': combined_ci_upper.round(2)
                 })
-                forecast_df[f'Trend_Forecast ({currency_symbol})'] = forecast_df['Trend_Forecast'].round(2)
-                forecast_df[f'Residual_Forecast ({currency_symbol})'] = forecast_df['Residual_Forecast'].round(2)
-                forecast_df[f'Combined_Forecast ({currency_symbol})'] = forecast_df['Combined_Forecast'].round(2)
-                forecast_df[f'CI_Lower ({currency_symbol})'] = forecast_df['CI_Lower'].round(2)
-                forecast_df[f'CI_Upper ({currency_symbol})'] = forecast_df['CI_Upper'].round(2)
-                
-                st.dataframe(forecast_df[['Date', f'Trend_Forecast ({currency_symbol})', 
-                                        f'Residual_Forecast ({currency_symbol})', 
-                                        f'Combined_Forecast ({currency_symbol})',
-                                        f'CI_Lower ({currency_symbol})', 
-                                        f'CI_Upper ({currency_symbol})']])
-                
+
+                st.dataframe(forecast_df)
+
                 # Next day forecast
                 st.subheader("Next Day Forecast")
                 next_day_trend = trend_forecast[0]
-                next_day_residual = residual_forecast[0]
+                next_day_residual = residual_forecast.iloc[0]  # Use .iloc on pandas Series
                 next_day_combined = combined_forecast[0]
                 current_price = float(y[-1])
                 change = next_day_combined - current_price
