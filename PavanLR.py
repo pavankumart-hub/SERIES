@@ -68,10 +68,28 @@ def safe_jarque_bera(resids):
 
 def safe_kpss(data):
     try:
-        kpss_stat, kpss_p, kpss_lags, kpss_crit = kpss(data, regression='ct')
-        return float(kpss_stat), float(kpss_p), None
+        # KPSS test with different regression types
+        kpss_stat, p_value, lags, critical_values = kpss(data, regression='c', nlags='auto')
+        
+        # Manual p-value calculation based on critical values
+        # KPSS critical values at 1%, 5%, 10% significance levels
+        cv_1pct = critical_values['1%']
+        cv_5pct = critical_values['5%'] 
+        cv_10pct = critical_values['10%']
+        
+        # Determine p-value based on test statistic and critical values
+        if kpss_stat < cv_10pct:
+            manual_pvalue = 0.99  # Very stationary
+        elif kpss_stat < cv_5pct:
+            manual_pvalue = 0.10  # Stationary at 10% level
+        elif kpss_stat < cv_1pct:
+            manual_pvalue = 0.05  # Stationary at 5% level
+        else:
+            manual_pvalue = 0.01  # Non-stationary at 1% level
+            
+        return float(kpss_stat), float(manual_pvalue), critical_values, None
     except Exception as ex:
-        return None, None, str(ex)
+        return None, None, None, str(ex)
 
 def safe_adfuller(data):
     try:
@@ -107,19 +125,40 @@ if run_btn:
 
         # KPSS Test on original data (before modeling)
         st.subheader("KPSS Test - Stationarity Check (Original Data)")
-        kpss_stat, kpss_p, kpss_err = safe_kpss(price_data)
+        kpss_stat, kpss_p, kpss_critical_values, kpss_err = safe_kpss(price_data)
         
         if kpss_err:
             st.error(f"KPSS test error: {kpss_err}")
         else:
             st.write(f"**KPSS Test Statistic:** {kpss_stat:.6f}")
-            st.write(f"**KPSS p-value:** {kpss_p:.6f}")
-            if kpss_p < 0.05:
-                st.error("✗ Data is non-stationary (p < 0.05) - Consider differencing")
+            st.write(f"**KPSS p-value:** {kpss_p:.4f}")
+            
+            # Display critical values
+            st.write("**Critical Values:**")
+            col_cv1, col_cv2, col_cv3 = st.columns(3)
+            with col_cv1:
+                st.write(f"1%: {kpss_critical_values['1%']:.4f}")
+            with col_cv2:
+                st.write(f"5%: {kpss_critical_values['5%']:.4f}")
+            with col_cv3:
+                st.write(f"10%: {kpss_critical_values['10%']:.4f}")
+            
+            # Interpretation
+            if kpss_stat > kpss_critical_values['1%']:
+                st.error("✗ Strong evidence of non-stationarity (test statistic > 1% critical value)")
+            elif kpss_stat > kpss_critical_values['5%']:
+                st.warning("∼ Evidence of non-stationarity (test statistic > 5% critical value)")
+            elif kpss_stat > kpss_critical_values['10%']:
+                st.warning("∼ Weak evidence of non-stationarity (test statistic > 10% critical value)")
             else:
-                st.success("✓ Data appears stationary (p ≥ 0.05)")
+                st.success("✓ Data appears stationary (test statistic < all critical values)")
         
-        st.info("Note: KPSS tests the null hypothesis that the data is stationary.")
+        st.info("""
+        **KPSS Test Interpretation:**
+        - Null Hypothesis: Data is stationary
+        - Reject null if test statistic > critical value (data is non-stationary)
+        - Fail to reject null if test statistic < critical value (data is stationary)
+        """)
 
         # show basics
         col1, col2, col3 = st.columns(3)
@@ -281,7 +320,12 @@ if run_btn:
             else:
                 st.error("✗ Residuals are non-stationary (p ≥ 0.05) - Model may not be adequate")
         
-        st.info("Note: ADF tests the null hypothesis that the data has a unit root (non-stationary).")
+        st.info("""
+        **ADF Test Interpretation:**
+        - Null Hypothesis: Data has a unit root (non-stationary)
+        - Reject null if p-value < 0.05 (data is stationary)
+        - Fail to reject null if p-value ≥ 0.05 (data is non-stationary)
+        """)
 
         # Additional helpful debug info (only if user wants)
         if st.checkbox("Show model debug info (coefficients & poly powers)"):
