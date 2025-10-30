@@ -222,6 +222,103 @@ if run_analysis_btn:
         plt.tight_layout()
         st.pyplot(fig)
 
+        # Residual Histogram with Normality Tests
+        st.subheader("Residual Distribution & Normality Tests")
+        
+        # Create subplots for histogram and QQ plot
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        
+        # Histogram
+        ax1.hist(residuals, bins=30, alpha=0.7, edgecolor='black', density=True)
+        ax1.set_xlabel(f'Residual Value ({currency_symbol})')
+        ax1.set_ylabel('Density')
+        ax1.set_title('Residual Histogram')
+        ax1.grid(alpha=0.3)
+        
+        # Add normal distribution curve
+        from scipy.stats import norm
+        xmin, xmax = ax1.get_xlim()
+        x = np.linspace(xmin, xmax, 100)
+        p = norm.pdf(x, np.mean(residuals), np.std(residuals))
+        ax1.plot(x, p, 'k', linewidth=2, label='Normal Distribution')
+        ax1.legend()
+        
+        # QQ Plot
+        from scipy import stats
+        stats.probplot(residuals, dist="norm", plot=ax2)
+        ax2.set_title('Q-Q Plot')
+        ax2.grid(alpha=0.3)
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+        
+        # Normality Tests
+        st.subheader("Normality Tests on Residuals")
+        
+        # Jarque-Bera Test
+        jb_stat, jb_p, jb_err = safe_jarque_bera(residuals)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if jb_err:
+                st.error(f"Jarque-Bera test error: {jb_err}")
+            else:
+                st.write(f"**Jarque-Bera Test:**")
+                st.write(f"Statistic: {jb_stat:.6f}")
+                st.write(f"p-value: {jb_p:.6f}")
+                if jb_p > 0.05:
+                    st.success("✓ Residuals appear normal (p > 0.05)")
+                else:
+                    st.error("✗ Residuals not normal (p ≤ 0.05)")
+        
+        with col2:
+            # Skewness and Kurtosis
+            residual_skew = float(skew(residuals))
+            residual_kurtosis = float(kurtosis(residuals, fisher=False))
+            
+            st.write(f"**Skewness:** {residual_skew:.6f}")
+            st.write(f"**Kurtosis:** {residual_kurtosis:.6f}")
+            st.write("**Normal Reference:** Skewness = 0, Kurtosis = 3")
+            
+            if abs(residual_skew) < 0.5 and abs(residual_kurtosis - 3) < 0.5:
+                st.success("✓ Near normal distribution")
+            else:
+                st.warning("∼ Deviation from normality detected")
+
+        # Autocorrelation Tests
+        st.subheader("Autocorrelation Tests on Residuals")
+        
+        # Ljung-Box Test
+        lb_stat, lb_p, lb_err = safe_ljungbox(residuals, max_lag=10)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if lb_err:
+                st.error(f"Ljung-Box test error: {lb_err}")
+            else:
+                st.write(f"**Ljung-Box Test:**")
+                st.write(f"Statistic: {lb_stat:.6f}")
+                st.write(f"p-value: {lb_p:.6f}")
+                if lb_p > 0.05:
+                    st.success("✓ No significant autocorrelation (p > 0.05)")
+                else:
+                    st.error("✗ Significant autocorrelation detected (p ≤ 0.05)")
+        
+        with col2:
+            # ADF Test on residuals
+            adf_stat, adf_p, adf_err = safe_adfuller(residuals)
+            
+            if adf_err:
+                st.error(f"ADF test error: {adf_err}")
+            else:
+                st.write(f"**ADF Test (Residuals):**")
+                st.write(f"Statistic: {adf_stat:.6f}")
+                st.write(f"p-value: {adf_p:.6f}")
+                if adf_p < 0.05:
+                    st.success("✓ Residuals are stationary (p < 0.05)")
+                else:
+                    st.warning("∼ Residuals may be non-stationary (p ≥ 0.05)")
+
         # ACF and PACF plots for residuals
         st.subheader("ACF and PACF Plots for Residuals")
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
@@ -229,6 +326,44 @@ if run_analysis_btn:
         ax1.set_title("Autocorrelation Function (ACF)")
         plot_pacf(residuals, ax=ax2, lags=20)
         ax2.set_title("Partial Autocorrelation Function (PACF)")
+        plt.tight_layout()
+        st.pyplot(fig)
+
+        # Trend Forecast
+        st.subheader("📊 Trend Forecast (Polynomial Model)")
+        
+        # Generate future dates for trend forecast
+        forecast_steps = 30  # Forecast 30 days for trend
+        last_date = price_data.index[-1]
+        future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
+        future_dates_ord = np.array([d.toordinal() for d in future_dates]).reshape(-1, 1).astype(float)
+        
+        # Trend forecast (polynomial)
+        future_X = (future_dates_ord - dates_mean) / dates_range
+        future_X_poly = poly.transform(future_X)
+        trend_forecast = model.predict(future_X_poly)
+        
+        # Print first 5 days of trend forecast
+        st.write("**First 5 Days Trend Forecast:**")
+        for i in range(min(5, forecast_steps)):
+            st.write(f"Day {i+1} ({future_dates[i].strftime('%Y-%m-%d')}): {currency_symbol}{trend_forecast[i]:.2f}")
+        
+        # Plot trend forecast
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Historical data
+        ax.plot(price_data.index, y, label='Historical Data', linewidth=2)
+        ax.plot(price_data.index, y_pred, label='Polynomial Fit', linestyle='--', linewidth=1.5)
+        
+        # Trend forecast
+        ax.plot(future_dates, trend_forecast, label='Trend Forecast', linewidth=2, color='green')
+        
+        ax.set_xlabel('Date')
+        ax.set_ylabel(f'Price ({currency_symbol})')
+        ax.set_title(f'Polynomial Trend Forecast (Degree {degree})')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        plt.xticks(rotation=45)
         plt.tight_layout()
         st.pyplot(fig)
 
@@ -284,31 +419,8 @@ if run_analysis_btn:
             st.write(f"**AIC:** {best_model_info['AIC']:.2f}")
             st.write(f"**BIC:** {best_model_info['BIC']:.2f}")
             
-            # Plot Fitted vs Actual Residuals
-            st.subheader("ARIMA: Fitted vs Actual Residuals")
-            fig, ax = plt.subplots(figsize=(12, 6))
-            
-            # Plot actual residuals
-            ax.plot(price_data.index, residuals, label='Actual Residuals', linewidth=2, alpha=0.7)
-            
-            # Plot fitted residuals (ARIMA predictions)
-            # Note: fitted_residuals might be shorter due to differencing
-            start_idx = len(residuals) - len(fitted_residuals)
-            ax.plot(price_data.index[start_idx:], fitted_residuals, 
-                   label='ARIMA Fitted Residuals', linewidth=2, linestyle='--')
-            
-            ax.axhline(0, linestyle='-', color='k', alpha=0.3)
-            ax.set_xlabel('Date')
-            ax.set_ylabel(f'Residual Value ({currency_symbol})')
-            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): Fitted vs Actual Residuals')
-            ax.legend()
-            ax.grid(True, alpha=0.3)
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            st.pyplot(fig)
-            
             # ARIMA Forecast for next 5 days
-            st.subheader("ARIMA Forecast for Next 5 Days (Residuals)")
+            st.subheader("🎯 ARIMA Forecast for Next 5 Days (Residuals)")
             
             # Forecast next 5 days
             forecast_steps = 5
@@ -327,24 +439,22 @@ if run_analysis_btn:
                 residual_ci_upper = residual_ci[:, 1]
             
             # Generate future dates
-            last_date = price_data.index[-1]
-            future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
+            arima_future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
             
             # PRINT THE 5 FORECASTED VALUES CLEARLY
-            st.subheader("🎯 5 Forecasted Residual Values")
+            st.subheader("📋 5-Day ARIMA Residual Forecast")
             
             # Method 1: Simple list
-            st.write("**Forecasted Values:**")
+            st.write("**Forecasted Residual Values:**")
             for i in range(forecast_steps):
-                st.write(f"Day {i+1} ({future_dates[i].strftime('%Y-%m-%d')}): {currency_symbol}{residual_forecast[i]:.6f}")
+                st.write(f"Day {i+1} ({arima_future_dates[i].strftime('%Y-%m-%d')}): {currency_symbol}{residual_forecast[i]:.6f}")
             
             # Method 2: Table
-            st.subheader("📋 Forecast Table")
             forecast_data = []
             for i in range(forecast_steps):
                 forecast_data.append({
                     'Day': i + 1,
-                    'Date': future_dates[i].strftime('%Y-%m-%d'),
+                    'Date': arima_future_dates[i].strftime('%Y-%m-%d'),
                     'Forecasted_Residual': f"{residual_forecast[i]:.6f}",
                     'CI_Lower': f"{residual_ci_lower[i]:.6f}",
                     'CI_Upper': f"{residual_ci_upper[i]:.6f}"
@@ -352,35 +462,6 @@ if run_analysis_btn:
             
             forecast_df = pd.DataFrame(forecast_data)
             st.dataframe(forecast_df)
-            
-            # Method 3: Raw values for verification
-            st.subheader("🔢 Raw Forecast Values (Verification)")
-            st.write(f"**Forecast array:** {residual_forecast}")
-            
-            # Plot ARIMA forecast (optional)
-            st.subheader("📈 Forecast Visualization")
-            fig, ax = plt.subplots(figsize=(12, 6))
-            
-            # Plot historical residuals (last 30 points for clarity)
-            plot_points = min(30, len(residuals))
-            ax.plot(price_data.index[-plot_points:], residuals[-plot_points:], 
-                   label='Historical Residuals', linewidth=2, color='blue')
-            
-            # Plot forecast
-            ax.plot(future_dates, residual_forecast, label='ARIMA Forecast', 
-                   linewidth=3, color='red', marker='o', markersize=8)
-            ax.fill_between(future_dates, residual_ci_lower, residual_ci_upper, 
-                          color='pink', alpha=0.3, label='95% Confidence Interval')
-            
-            ax.axhline(0, linestyle='-', color='k', alpha=0.3)
-            ax.set_xlabel('Date')
-            ax.set_ylabel(f'Residual Value ({currency_symbol})')
-            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): 5-Day Residual Forecast')
-            ax.legend()
-            ax.grid(True, alpha=0.3)
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            st.pyplot(fig)
             
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
