@@ -21,12 +21,21 @@ st.markdown("Center & scale date before polynomial transform to avoid numerical 
 # Sidebar inputs
 st.sidebar.header("Settings")
 ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
+
+# Calendar date selection
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    start_date = st.date_input("Start Date", datetime.now() - timedelta(days=180))
+with col2:
+    end_date = st.date_input("End Date", datetime.now())
+
+# Currency selection
+currency = st.sidebar.selectbox("Currency", ["USD ($)", "INR (₹)"])
+currency_symbol = "$" if currency == "USD ($)" else "₹"
+
 days = st.sidebar.slider("Days to Analyze", 30, 365, 180)
 degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 run_btn = st.sidebar.button("Run Analysis")
-
-end_date = datetime.now()
-start_date = end_date - timedelta(days=days)
 
 def safe_ljungbox(resids, max_lag=10):
     n = len(resids)
@@ -69,11 +78,12 @@ if run_btn:
         # show basics
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Current High Price", f"${float(high.iloc[-1]):.2f}")
+            st.metric("Current High Price", f"{currency_symbol}{float(high.iloc[-1]):.2f}")
         with col2:
             st.metric("Data Points", n)
         with col3:
-            st.metric("Analysis Period (days)", days)
+            actual_days = (high.index[-1] - high.index[0]).days
+            st.metric("Actual Period (days)", actual_days)
 
         # Prepare X: center + scale ordinal dates to range ~ [-0.5, 0.5]
         dates = np.array([d.toordinal() for d in high.index]).reshape(-1, 1).astype(float)
@@ -104,7 +114,7 @@ if run_btn:
 
         st.subheader("Model Performance")
         c1, c2 = st.columns(2)
-        c1.metric("RMSE", f"${rmse:.4f}")
+        c1.metric("RMSE", f"{currency_symbol}{rmse:.4f}")
         c2.metric("R²", f"{r2:.4f}")
 
         # Plot actual vs predicted (sorted by date to avoid line crossing)
@@ -112,8 +122,10 @@ if run_btn:
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.plot(high.index, y, label="Actual High", linewidth=2)
         ax.plot(high.index, y_pred, label="Predicted", linestyle="--", linewidth=2)
-        ax.set_xlabel("Date"); ax.set_ylabel("Price ($)")
-        ax.legend(); ax.grid(alpha=0.3)
+        ax.set_xlabel("Date")
+        ax.set_ylabel(f"Price ({currency_symbol})")
+        ax.legend()
+        ax.grid(alpha=0.3)
         plt.xticks(rotation=45)
         plt.tight_layout()
         st.pyplot(fig)
@@ -126,8 +138,10 @@ if run_btn:
         fig, ax = plt.subplots(figsize=(10, 3))
         ax.plot(high.index, residuals, label="Residuals")
         ax.axhline(0, linestyle="--", color="k")
-        ax.set_xlabel("Date"); ax.set_ylabel("Residual ($)")
-        ax.legend(); ax.grid(alpha=0.3)
+        ax.set_xlabel("Date")
+        ax.set_ylabel(f"Residual ({currency_symbol})")
+        ax.legend()
+        ax.grid(alpha=0.3)
         plt.xticks(rotation=45)
         plt.tight_layout()
         st.pyplot(fig)
@@ -137,7 +151,7 @@ if run_btn:
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.hist(residuals, bins=30, alpha=0.7, edgecolor='black')
         ax.set_title("Residual Histogram")
-        ax.set_xlabel("Residual Value")
+        ax.set_xlabel(f"Residual Value ({currency_symbol})")
         ax.set_ylabel("Frequency")
         ax.grid(alpha=0.3)
         plt.tight_layout()
@@ -145,30 +159,34 @@ if run_btn:
 
         # Calculate skewness and kurtosis
         residual_skew = float(skew(residuals))  # Ensure it's a float
-        residual_kurtosis = float(kurtosis(residuals, fisher=True))  # Ensure it's a float
+        residual_kurtosis = float(kurtosis(residuals, fisher=False))  # Fisher=False gives actual kurtosis (normal=3)
         
-        # Display skewness and kurtosis
+        # Display skewness and kurtosis with normal distribution reference
         st.subheader("Residual Distribution Statistics")
+        st.info("**Normal Distribution Reference:** Skewness = 0, Kurtosis = 3")
+        
         col_skew, col_kurt = st.columns(2)
         with col_skew:
             st.write(f"**Skewness:** {residual_skew:.6f}")
+            st.write(f"**Normal Reference:** 0")
             st.write(f"**Interpretation:**")
             if abs(residual_skew) < 0.5:
-                st.write("✓ Near symmetric (good)")
+                st.success("✓ Near symmetric (good - close to normal)")
             elif abs(residual_skew) < 1.0:
-                st.write("∼ Moderately skewed")
+                st.warning("∼ Moderately skewed")
             else:
-                st.write("✗ Highly skewed")
+                st.error("✗ Highly skewed (far from normal)")
                 
         with col_kurt:
             st.write(f"**Kurtosis:** {residual_kurtosis:.6f}")
+            st.write(f"**Normal Reference:** 3")
             st.write(f"**Interpretation:**")
-            if abs(residual_kurtosis) < 0.5:
-                st.write("✓ Near normal kurtosis (good)")
-            elif abs(residual_kurtosis) < 1.0:
-                st.write("∼ Moderate deviation from normal")
+            if abs(residual_kurtosis - 3) < 0.5:
+                st.success("✓ Near normal kurtosis (good)")
+            elif abs(residual_kurtosis - 3) < 1.0:
+                st.warning("∼ Moderate deviation from normal")
             else:
-                st.write("✗ Heavy-tailed or light-tailed")
+                st.error("✗ Heavy-tailed or light-tailed (far from normal)")
 
         # Diagnostics: Ljung-Box and Jarque-Bera (safe wrappers)
         st.subheader("Residual Diagnostics (statistical tests)")
@@ -224,13 +242,12 @@ if run_btn:
             change = next_pred - float(y[-1])
             change_pct = (change / float(y[-1])) * 100.0
             pcol1, pcol2 = st.columns(2)
-            pcol1.metric("Next Day Prediction", f"${next_pred:.2f}", delta=f"{change:.2f} ({change_pct:.2f}%)")
-            pcol2.metric("Current High", f"${float(y[-1]):.2f}")
+            pcol1.metric("Next Day Prediction", f"{currency_symbol}{next_pred:.2f}", 
+                        delta=f"{change:.2f} ({change_pct:.2f}%)")
+            pcol2.metric("Current High", f"{currency_symbol}{float(y[-1]):.2f}")
         except Exception as ex:
             st.error(f"Next-day prediction failed: {ex}")
 
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
-        import traceback
-        st.error(f"Detailed error: {traceback.format_exc()}")
         st.info("Try a smaller degree, shorter date range, or different ticker.")
