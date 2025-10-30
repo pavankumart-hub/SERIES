@@ -148,7 +148,6 @@ if run_analysis_btn:
             st.error(f"KPSS test error: {kpss_err}")
         else:
             st.write(f"**KPSS Test Statistic:** {kpss_stat:.6f}")
-            st.write(f"**KPSS p-value:** {kpss_p:.4f}")
             st.write(f"**5% Critical Value:** {kpss_critical_values['5%']:.4f}")
 
             if kpss_stat > kpss_critical_values['5%']:
