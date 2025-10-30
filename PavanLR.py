@@ -41,7 +41,6 @@ st.sidebar.header("ARIMA Parameters")
 p_range = st.sidebar.slider("P (AR) Range", 0, 5, (0, 2))
 q_range = st.sidebar.slider("Q (MA) Range", 0, 5, (0, 2))
 d_range = st.sidebar.slider("D (Differencing) Range", 0, 2, (0, 1))
-forecast_days = st.sidebar.slider("Forecast Days", 1, 365, 30)
 
 run_analysis_btn = st.sidebar.button("Run Complete Analysis")
 
@@ -251,12 +250,16 @@ if run_analysis_btn:
                             if model_arima is not None:
                                 aic = model_arima.aic
                                 bic = model_arima.bic
+                                # Get fitted values from ARIMA
+                                fitted_residuals = model_arima.fittedvalues
                                 results.append({
                                     'p': p,
                                     'd': d, 
                                     'q': q,
                                     'AIC': aic,
-                                    'BIC': bic
+                                    'BIC': bic,
+                                    'model': model_arima,
+                                    'fitted_residuals': fitted_residuals
                                 })
                         except:
                             continue
@@ -267,97 +270,105 @@ if run_analysis_btn:
             results_df = results_df.sort_values('AIC')
             
             st.subheader("ARIMA Model Comparison (Sorted by AIC)")
-            st.dataframe(results_df)
+            # Display without model and fitted_residuals columns
+            display_df = results_df[['p', 'd', 'q', 'AIC', 'BIC']].copy()
+            st.dataframe(display_df)
             
             # Best model
-            best_model = results_df.iloc[0]
+            best_model_info = results_df.iloc[0]
+            best_arima_model = best_model_info['model']
+            fitted_residuals = best_model_info['fitted_residuals']
+            
             st.subheader("Best ARIMA Model for Residuals")
-            st.write(f"**ARIMA({best_model['p']},{best_model['d']},{best_model['q']})**")
-            st.write(f"**AIC:** {best_model['AIC']:.2f}")
-            st.write(f"**BIC:** {best_model['BIC']:.2f}")
+            st.write(f"**ARIMA({best_model_info['p']},{best_model_info['d']},{best_model_info['q']})**")
+            st.write(f"**AIC:** {best_model_info['AIC']:.2f}")
+            st.write(f"**BIC:** {best_model_info['BIC']:.2f}")
             
-            # Fit the best ARIMA model
-            best_arima_model, error = fit_arima_model(residuals, int(best_model['p']), int(best_model['d']), int(best_model['q']))
+            # Plot Fitted vs Actual Residuals
+            st.subheader("ARIMA: Fitted vs Actual Residuals")
+            fig, ax = plt.subplots(figsize=(12, 6))
             
-            if best_arima_model:
-                # Combined Forecast: Trend + ARIMA on residuals
-                st.header("Combined Forecast: Trend + ARIMA")
-                
-                # Generate future dates for trend forecast
-                last_date = price_data.index[-1]
-                future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_days + 1)]
-                future_dates_ord = np.array([d.toordinal() for d in future_dates]).reshape(-1, 1).astype(float)
-                
-                # Trend forecast (polynomial)
-                future_X = (future_dates_ord - dates_mean) / dates_range
-                future_X_poly = poly.transform(future_X)
-                trend_forecast = model.predict(future_X_poly)
-                
-                # ARIMA forecast on residuals
-                arima_forecast = best_arima_model.get_forecast(steps=forecast_days)
-                residual_forecast = arima_forecast.predicted_mean  # This is already a numpy array
-                residual_ci = arima_forecast.conf_int()  # This is a pandas DataFrame
-
-                # Convert confidence intervals to numpy arrays
-                residual_ci_lower = residual_ci.iloc[:, 0].values
-                residual_ci_upper = residual_ci.iloc[:, 1].values
-
-                # Combined forecast - all are numpy arrays now
-                combined_forecast = trend_forecast + residual_forecast
-                combined_ci_lower = trend_forecast + residual_ci_lower
-                combined_ci_upper = trend_forecast + residual_ci_upper
-
-                # Plot combined forecast
-                fig, ax = plt.subplots(figsize=(12, 6))
-                
-                # Historical data
-                ax.plot(price_data.index, y, label='Historical Data', linewidth=2)
-                ax.plot(price_data.index, y_pred, label='Polynomial Fit', linestyle='--', linewidth=1.5)
-                
-                # Forecasts
-                ax.plot(future_dates, combined_forecast, label='Combined Forecast', color='red', linewidth=2)
-                ax.plot(future_dates, trend_forecast, label='Trend Forecast', color='green', linestyle='--', linewidth=1.5)
-                ax.fill_between(future_dates, combined_ci_lower, combined_ci_upper, color='pink', alpha=0.3, label='Confidence Interval')
-                
-                ax.set_xlabel('Date')
-                ax.set_ylabel(f'Price ({currency_symbol})')
-                ax.set_title(f'Combined Forecast: Polynomial Trend + ARIMA on Residuals')
-                ax.legend()
-                ax.grid(True, alpha=0.3)
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                st.pyplot(fig)
-                
-                # Forecast details
-                st.subheader("Forecast Details")
-                forecast_df = pd.DataFrame({
-                    'Date': future_dates,
-                    f'Trend_Forecast ({currency_symbol})': trend_forecast.round(2),
-                    f'Residual_Forecast ({currency_symbol})': residual_forecast.round(2),
-                    f'Combined_Forecast ({currency_symbol})': combined_forecast.round(2),
-                    f'CI_Lower ({currency_symbol})': combined_ci_lower.round(2),
-                    f'CI_Upper ({currency_symbol})': combined_ci_upper.round(2)
-                })
-
-                st.dataframe(forecast_df)
-
-                # Next day forecast
-                st.subheader("Next Day Forecast")
-                next_day_trend = trend_forecast[0]
-                next_day_residual = residual_forecast[0]  # Direct numpy array indexing
-                next_day_combined = combined_forecast[0]
-                current_price = float(y[-1])
-                change = next_day_combined - current_price
-                change_pct = (change / current_price) * 100.0
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Trend Component", f"{currency_symbol}{next_day_trend:.2f}")
-                with col2:
-                    st.metric("Residual Component", f"{currency_symbol}{next_day_residual:.2f}")
-                with col3:
-                    st.metric("Combined Forecast", f"{currency_symbol}{next_day_combined:.2f}", 
-                             delta=f"{change:.2f} ({change_pct:.2f}%)")
+            # Plot actual residuals
+            ax.plot(price_data.index, residuals, label='Actual Residuals', linewidth=2, alpha=0.7)
+            
+            # Plot fitted residuals (ARIMA predictions)
+            # Note: fitted_residuals might be shorter due to differencing
+            start_idx = len(residuals) - len(fitted_residuals)
+            ax.plot(price_data.index[start_idx:], fitted_residuals, 
+                   label='ARIMA Fitted Residuals', linewidth=2, linestyle='--')
+            
+            ax.axhline(0, linestyle='-', color='k', alpha=0.3)
+            ax.set_xlabel('Date')
+            ax.set_ylabel(f'Residual Value ({currency_symbol})')
+            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): Fitted vs Actual Residuals')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # ARIMA Forecast for next 5 days
+            st.subheader("ARIMA Forecast for Next 5 Days (Residuals)")
+            
+            # Forecast next 5 days
+            forecast_steps = 5
+            arima_forecast = best_arima_model.get_forecast(steps=forecast_steps)
+            residual_forecast = arima_forecast.predicted_mean
+            residual_ci = arima_forecast.conf_int()
+            
+            # Convert confidence intervals to numpy arrays
+            residual_ci_lower = residual_ci.iloc[:, 0].values
+            residual_ci_upper = residual_ci.iloc[:, 1].values
+            
+            # Generate future dates
+            last_date = price_data.index[-1]
+            future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
+            
+            # Plot ARIMA forecast
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Plot historical residuals
+            ax.plot(price_data.index, residuals, label='Historical Residuals', linewidth=2, color='blue')
+            
+            # Plot forecast
+            ax.plot(future_dates, residual_forecast, label='ARIMA Forecast', linewidth=2, color='red')
+            ax.fill_between(future_dates, residual_ci_lower, residual_ci_upper, 
+                          color='pink', alpha=0.3, label='95% Confidence Interval')
+            
+            ax.axhline(0, linestyle='-', color='k', alpha=0.3)
+            ax.set_xlabel('Date')
+            ax.set_ylabel(f'Residual Value ({currency_symbol})')
+            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): 5-Day Residual Forecast')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Forecast details table
+            st.subheader("ARIMA Forecast Details (Residuals)")
+            forecast_df = pd.DataFrame({
+                'Date': future_dates,
+                f'Residual_Forecast ({currency_symbol})': residual_forecast.round(4),
+                f'CI_Lower ({currency_symbol})': residual_ci_lower.round(4),
+                f'CI_Upper ({currency_symbol})': residual_ci_upper.round(4)
+            })
+            
+            st.dataframe(forecast_df)
+            
+            # Next day residual forecast
+            st.subheader("Next Day Residual Forecast")
+            next_day_residual = residual_forecast[0]
+            next_day_ci_lower = residual_ci_lower[0]
+            next_day_ci_upper = residual_ci_upper[0]
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Residual Forecast", f"{currency_symbol}{next_day_residual:.4f}")
+            with col2:
+                st.metric("CI Lower", f"{currency_symbol}{next_day_ci_lower:.4f}")
+            with col3:
+                st.metric("CI Upper", f"{currency_symbol}{next_day_ci_upper:.4f}")
                 
         else:
             st.error("No ARIMA models could be fitted with the selected parameters.")
