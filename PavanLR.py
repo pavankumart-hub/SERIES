@@ -68,7 +68,7 @@ def safe_jarque_bera(resids):
 
 def safe_kpss(data):
     try:
-        kpss_stat, kpss_p, kpss_lags, kpss_crit = kpss(data, regression='c')
+        kpss_stat, kpss_p, kpss_lags, kpss_crit = kpss(data, regression='ct')
         return float(kpss_stat), float(kpss_p), None
     except Exception as ex:
         return None, None, str(ex)
