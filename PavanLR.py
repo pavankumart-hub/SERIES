@@ -1034,33 +1034,6 @@ if run_analysis_btn:
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
         st.info("Try a smaller degree, shorter date range, or different ticker.")
-# pages/4_📈_High_Open_Forecast.py
-import streamlit as st
-import yfinance as yf
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from datetime import datetime, timedelta
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-import warnings
-warnings.filterwarnings("ignore")
-
-st.set_page_config(page_title="High-Open ARIMA Forecast", layout="wide")
-st.title("📈 High-Open Percentage ARIMA Forecast")
-st.markdown("Model and forecast the `(High - Open) / Open * 100` percentage using ARIMA")
-
-# Sidebar inputs
-st.sidebar.header("Settings")
-ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
-
-# Date selection
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    start_date = st.date_input("Start Date", datetime(2020, 1, 1))
-with col2:
-    end_date = st.date_input("End Date", datetime.now())
 
 # ARIMA parameters
 st.sidebar.header("ARIMA Parameters")
