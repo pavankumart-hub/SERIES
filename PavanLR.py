@@ -1309,65 +1309,6 @@ if run_forecast_btn:
                 st.warning(f"Medium Uncertainty: {uncertainty:.1f}%")
             else:
                 st.success(f"Low Uncertainty: {uncertainty:.1f}%")
-        
-        # Risk assessment
-        st.subheader("⚠️ Risk Assessment")
-        
-        # Check for extreme forecasts
-        extreme_forecasts = sum(1 for x in forecast_values if abs(x) > 5)
-        if extreme_forecasts > 0:
-            st.warning(f"**Extreme moves forecast:** {extreme_forecasts} day(s) with > ±5% expected")
-        
-        # Volatility assessment
-        forecast_volatility = np.std(forecast_values)
-        if forecast_volatility > 2:
-            st.warning(f"**High forecast volatility:** {forecast_volatility:.2f}% std dev")
-        else:
-            st.success(f"**Moderate forecast volatility:** {forecast_volatility:.2f}% std dev")
-        
-        # Model diagnostics
-        st.header("🔍 Model Diagnostics")
-        
-        # Residuals analysis
-        residuals = model.resid
-        
-        st.subheader("Residuals Analysis")
-        col1, col2, col3, col4 = st.columns(4)
-        
-        residual_mean = float(residuals.mean())
-        residual_std = float(residuals.std())
-        residual_skew = float(reskew(residuals.dropna()))
-        
-        with col1:
-            st.metric("Residual Mean", f"{residual_mean:.4f}")
-        with col2:
-            st.metric("Residual Std", f"{residual_std:.4f}")
-        with col3:
-            st.metric("Residual Skew", f"{residual_skew:.4f}")
-        with col4:
-            # Check if residuals are white noise
-            lb_test = acorr_ljungbox(residuals.dropna(), lags=[10], return_df=True)
-            lb_pvalue = float(lb_test['lb_pvalue'].iloc[0])
-            if lb_pvalue > 0.05:
-                st.success("White Noise ✓")
-            else:
-                st.error("Not White Noise ✗")
-        
-        # Residuals plot
-        fig5, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-        
-        ax1.plot(residuals.index, residuals, label='Residuals')
-        ax1.axhline(0, color='red', linestyle='--', alpha=0.7)
-        ax1.set_title('Model Residuals Over Time')
-        ax1.legend()
-        ax1.grid(alpha=0.3)
-        
-        ax2.hist(residuals.dropna(), bins=30, alpha=0.7, color='skyblue', edgecolor='black')
-        ax2.set_title('Residuals Distribution')
-        ax2.grid(alpha=0.3)
-        
-        plt.tight_layout()
-        st.pyplot(fig5)
 
     except Exception as e:
         st.error(f"Analysis failed: {str(e)}")
