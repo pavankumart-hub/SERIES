@@ -866,39 +866,170 @@ if run_analysis_btn:
             with trend_col2:
                 avg_daily_change = overall_trend / (forecast_steps - 1) if forecast_steps > 1 else 0
                 st.metric("Average Daily Change", f"{currency_symbol}{avg_daily_change:+.2f}")
+            # HIGH-OPEN PERCENTAGE ANALYSIS - NEW SECTION
+            st.header("📊 High-Open Percentage Analysis")
+            st.markdown("This analysis shows the daily price movement as percentage: `(High - Open) / Open * 100`")
+            
+            # Calculate high-open percentage
+            if 'High' in data.columns and 'Open' in data.columns:
+                high_open_data = data[['High', 'Open']].copy()
+                high_open_data = high_open_data.dropna()
                 
-            # Risk Assessment
-            st.subheader("⚠️ Risk Assessment")
-            
-            # Calculate confidence interval width as a measure of uncertainty
-            avg_ci_width = np.mean([float(price_ci_upper[i]) - float(price_ci_lower[i]) for i in range(forecast_steps)])
-            uncertainty_percent = (avg_ci_width / current_price) * 100
-            
-            risk_col1, risk_col2, risk_col3 = st.columns(3)
-            
-            with risk_col1:
-                if uncertainty_percent < 2:
-                    st.success(f"Low Uncertainty: {uncertainty_percent:.1f}%")
-                elif uncertainty_percent < 5:
-                    st.warning(f"Medium Uncertainty: {uncertainty_percent:.1f}%")
-                else:
-                    st.error(f"High Uncertainty: {uncertainty_percent:.1f}%")
-            
-            with risk_col2:
-                # Check if current price is within confidence intervals
-                within_ci = any(float(price_ci_lower[i]) <= current_price <= float(price_ci_upper[i]) for i in range(min(3, forecast_steps)))
-                if within_ci:
-                    st.success("Current price within forecast range")
-                else:
-                    st.warning("Current price outside forecast range")
-            
-            with risk_col3:
-                # Volatility indicator based on historical data
-                historical_volatility = price_data.pct_change().std() * np.sqrt(252) * 100  # Annualized
-                st.metric("Historical Volatility", f"{historical_volatility:.1f}%")
+                # Calculate percentage: (High - Open) / Open * 100
+                high_open_data['High_Open_Pct'] = ((high_open_data['High'] - high_open_data['Open']) / high_open_data['Open']) * 100
                 
-        else:
-            st.error("No valid ARIMA models could be fitted to the original data. Try different parameter ranges.")
+                # Basic statistics
+                st.subheader("Basic Statistics")
+                col1, col2, col3, col4 = st.columns(4)
+                
+                avg_pct = float(high_open_data['High_Open_Pct'].mean())
+                max_pct = float(high_open_data['High_Open_Pct'].max())
+                min_pct = float(high_open_data['High_Open_Pct'].min())
+                std_pct = float(high_open_data['High_Open_Pct'].std())
+                
+                with col1:
+                    st.metric("Average %", f"{avg_pct:.2f}%")
+                with col2:
+                    st.metric("Maximum %", f"{max_pct:.2f}%")
+                with col3:
+                    st.metric("Minimum %", f"{min_pct:.2f}%")
+                with col4:
+                    st.metric("Std Dev %", f"{std_pct:.2f}%")
+                
+                # Plot 1: Time series of High-Open percentage
+                st.subheader("Daily High-Open Percentage Over Time")
+                fig1, ax1 = plt.subplots(figsize=(12, 6))
+                ax1.plot(high_open_data.index, high_open_data['High_Open_Pct'], 
+                        linewidth=1, alpha=0.7, color='blue', label='Daily %')
+                
+                # Add rolling average
+                rolling_avg = high_open_data['High_Open_Pct'].rolling(window=20).mean()
+                ax1.plot(high_open_data.index, rolling_avg, 
+                        linewidth=2, color='red', label='20-Day Moving Avg')
+                
+                ax1.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+                ax1.axhline(y=avg_pct, color='green', linestyle='--', alpha=0.7, label=f'Overall Avg: {avg_pct:.2f}%')
+                
+                ax1.set_xlabel('Date')
+                ax1.set_ylabel('Percentage (%)')
+                ax1.set_title(f'{ticker} Daily (High-Open)/Open Percentage')
+                ax1.legend()
+                ax1.grid(alpha=0.3)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                st.pyplot(fig1)
+                
+                # Plot 2: Histogram of High-Open percentage
+                st.subheader("Distribution of High-Open Percentage")
+                fig2, ax2 = plt.subplots(figsize=(10, 6))
+                
+                n, bins, patches = ax2.hist(high_open_data['High_Open_Pct'], bins=50, 
+                                          alpha=0.7, color='skyblue', edgecolor='black', 
+                                          density=True)
+                
+                # Add normal distribution curve for comparison
+                from scipy.stats import norm
+                xmin, xmax = ax2.get_xlim()
+                x = np.linspace(xmin, xmax, 100)
+                p = norm.pdf(x, avg_pct, std_pct)
+                ax2.plot(x, p, 'k', linewidth=2, label='Normal Distribution')
+                
+                ax2.axvline(avg_pct, color='red', linestyle='--', linewidth=2, 
+                          label=f'Mean: {avg_pct:.2f}%')
+                ax2.axvline(avg_pct + std_pct, color='orange', linestyle=':', alpha=0.7,
+                          label=f'±1 Std Dev: {std_pct:.2f}%')
+                ax2.axvline(avg_pct - std_pct, color='orange', linestyle=':', alpha=0.7)
+                
+                ax2.set_xlabel('(High - Open) / Open (%)')
+                ax2.set_ylabel('Density')
+                ax2.set_title('Distribution of Daily High-Open Percentage')
+                ax2.legend()
+                ax2.grid(alpha=0.3)
+                plt.tight_layout()
+                st.pyplot(fig2)
+                
+                # Plot 3: Box plot by year
+                st.subheader("High-Open Percentage by Year")
+                high_open_data['Year'] = high_open_data.index.year
+                
+                fig3, ax3 = plt.subplots(figsize=(12, 6))
+                yearly_data = [high_open_data[high_open_data['Year'] == year]['High_Open_Pct'] 
+                             for year in sorted(high_open_data['Year'].unique())]
+                
+                box_plot = ax3.boxplot(yearly_data, labels=sorted(high_open_data['Year'].unique()),
+                                     patch_artist=True)
+                
+                # Color the boxes
+                for patch in box_plot['boxes']:
+                    patch.set_facecolor('lightblue')
+                    patch.set_alpha(0.7)
+                
+                ax3.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+                ax3.axhline(y=avg_pct, color='red', linestyle='--', alpha=0.7, 
+                          label=f'Overall Avg: {avg_pct:.2f}%')
+                
+                ax3.set_xlabel('Year')
+                ax3.set_ylabel('(High - Open) / Open (%)')
+                ax3.set_title('Yearly Distribution of High-Open Percentage')
+                ax3.legend()
+                ax3.grid(alpha=0.3)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                st.pyplot(fig3)
+                
+                # Statistical insights
+                st.subheader("📈 Statistical Insights")
+                
+                # Positive vs Negative days
+                positive_days = (high_open_data['High_Open_Pct'] > 0).sum()
+                negative_days = (high_open_data['High_Open_Pct'] < 0).sum()
+                zero_days = (high_open_data['High_Open_Pct'] == 0).sum()
+                total_days = len(high_open_data)
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Positive Days", f"{positive_days} ({positive_days/total_days*100:.1f}%)")
+                with col2:
+                    st.metric("Negative Days", f"{negative_days} ({negative_days/total_days*100:.1f}%)")
+                with col3:
+                    st.metric("Zero Days", f"{zero_days} ({zero_days/total_days*100:.1f}%)")
+                
+                # Extreme moves analysis
+                extreme_positive = (high_open_data['High_Open_Pct'] > 5).sum()
+                extreme_negative = (high_open_data['High_Open_Pct'] < -5).sum()
+                
+                st.write("**Extreme Moves (> ±5%):**")
+                st.write(f"- Days with > +5%: {extreme_positive} ({extreme_positive/total_days*100:.1f}%)")
+                st.write(f"- Days with < -5%: {extreme_negative} ({extreme_negative/total_days*100:.1f}%)")
+                
+                # Recent performance
+                st.subheader("Recent Performance (Last 30 Days)")
+                recent_data = high_open_data.tail(30)
+                recent_avg = recent_data['High_Open_Pct'].mean()
+                recent_positive = (recent_data['High_Open_Pct'] > 0).sum()
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Recent Average %", f"{recent_avg:.2f}%", 
+                             f"{(recent_avg - avg_pct):+.2f}% vs overall")
+                with col2:
+                    st.metric("Recent Positive Days", f"{recent_positive}/30 ({recent_positive/30*100:.1f}%)")
+                
+                # Trading insights
+                st.subheader("💡 Trading Insights")
+                st.write(f"**Average daily upward potential:** {avg_pct:.2f}%")
+                st.write(f"**Typical daily range (1 std dev):** ±{std_pct:.2f}%")
+                st.write(f"**Consistency:** {positive_days/total_days*100:.1f}% of days see highs above opening price")
+                
+                if avg_pct > 1.0:
+                    st.success("🔍 **Observation:** This stock shows strong upward intraday momentum on average")
+                elif avg_pct < 0.5:
+                    st.info("🔍 **Observation:** This stock shows modest upward intraday momentum")
+                else:
+                    st.warning("🔍 **Observation:** This stock shows moderate upward intraday momentum")
+                    
+            else:
+                st.warning("High and Open price data not available for analysis")
 
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
