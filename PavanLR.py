@@ -1197,7 +1197,7 @@ if run_forecast_btn:
         fig3, ax3 = plt.subplots(figsize=(12, 6))
         
         # Plot last 60 days for clarity
-        plot_days = min(60, len(high_open_data))
+        plot_days = len(high_open_data)
         ax3.plot(high_open_data.index[-plot_days:], 
                 high_open_data['High_Open_Pct'].iloc[-plot_days:], 
                 label='Actual', linewidth=2, color='blue')
