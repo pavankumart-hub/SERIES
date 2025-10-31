@@ -792,6 +792,110 @@ if run_analysis_btn:
             st.write("**Model Quality Assessment:**")
             for check in quality_checks:
                 st.write(check)
+
+            # FINAL ARIMA FORECAST VALUES - NEW SECTION
+            st.header("🎯 Final ARIMA Forecast Values")
+            
+            # Create a clean display of the 5-day forecast
+            st.subheader("5-Day Stock Price Forecast Summary")
+            
+            forecast_summary = []
+            for i in range(forecast_steps):
+                forecast_value = float(price_forecast[i])
+                ci_lower_val = float(price_ci_lower[i])
+                ci_upper_val = float(price_ci_upper[i])
+                
+                # Calculate percentage change from current price
+                current_price = float(price_data.iloc[-1])
+                price_change = forecast_value - current_price
+                percent_change = (price_change / current_price) * 100
+                
+                forecast_summary.append({
+                    'Day': f"Day {i+1}",
+                    'Date': future_dates_original[i].strftime('%Y-%m-%d'),
+                    'Forecasted Price': f"{currency_symbol}{forecast_value:.2f}",
+                    'Change': f"{currency_symbol}{price_change:+.2f}",
+                    'Change %': f"{percent_change:+.2f}%",
+                    'Confidence Interval': f"[{currency_symbol}{ci_lower_val:.2f}, {currency_symbol}{ci_upper_val:.2f}]"
+                })
+            
+            # Display as a nice table
+            final_forecast_df = pd.DataFrame(forecast_summary)
+            st.dataframe(final_forecast_df, use_container_width=True)
+            
+            # Also show as individual metrics for Day 1 forecast
+            st.subheader("Tomorrow's Forecast (Day 1)")
+            col1, col2, col3 = st.columns(3)
+            
+            day1_forecast = float(price_forecast[0])
+            day1_change = day1_forecast - current_price
+            day1_percent = (day1_change / current_price) * 100
+            
+            with col1:
+                st.metric(
+                    "Forecasted Price", 
+                    f"{currency_symbol}{day1_forecast:.2f}",
+                    f"{day1_change:+.2f} ({day1_percent:+.2f}%)"
+                )
+            
+            with col2:
+                st.metric("Confidence Lower", f"{currency_symbol}{float(price_ci_lower[0]):.2f}")
+            
+            with col3:
+                st.metric("Confidence Upper", f"{currency_symbol}{float(price_ci_upper[0]):.2f}")
+            
+            # Overall trend analysis
+            st.subheader("📊 Forecast Trend Analysis")
+            
+            # Calculate overall trend
+            first_forecast = float(price_forecast[0])
+            last_forecast = float(price_forecast[-1])
+            overall_trend = last_forecast - first_forecast
+            overall_trend_percent = (overall_trend / first_forecast) * 100
+            
+            trend_col1, trend_col2 = st.columns(2)
+            
+            with trend_col1:
+                if overall_trend > 0:
+                    st.success(f"📈 Bullish Trend: +{currency_symbol}{overall_trend:.2f} (+{overall_trend_percent:.2f}%) over 5 days")
+                elif overall_trend < 0:
+                    st.error(f"📉 Bearish Trend: {currency_symbol}{overall_trend:.2f} ({overall_trend_percent:.2f}%) over 5 days")
+                else:
+                    st.info("➡️ Neutral Trend: No change over 5 days")
+            
+            with trend_col2:
+                avg_daily_change = overall_trend / (forecast_steps - 1) if forecast_steps > 1 else 0
+                st.metric("Average Daily Change", f"{currency_symbol}{avg_daily_change:+.2f}")
+                
+            # Risk Assessment
+            st.subheader("⚠️ Risk Assessment")
+            
+            # Calculate confidence interval width as a measure of uncertainty
+            avg_ci_width = np.mean([float(price_ci_upper[i]) - float(price_ci_lower[i]) for i in range(forecast_steps)])
+            uncertainty_percent = (avg_ci_width / current_price) * 100
+            
+            risk_col1, risk_col2, risk_col3 = st.columns(3)
+            
+            with risk_col1:
+                if uncertainty_percent < 2:
+                    st.success(f"Low Uncertainty: {uncertainty_percent:.1f}%")
+                elif uncertainty_percent < 5:
+                    st.warning(f"Medium Uncertainty: {uncertainty_percent:.1f}%")
+                else:
+                    st.error(f"High Uncertainty: {uncertainty_percent:.1f}%")
+            
+            with risk_col2:
+                # Check if current price is within confidence intervals
+                within_ci = any(float(price_ci_lower[i]) <= current_price <= float(price_ci_upper[i]) for i in range(min(3, forecast_steps)))
+                if within_ci:
+                    st.success("Current price within forecast range")
+                else:
+                    st.warning("Current price outside forecast range")
+            
+            with risk_col3:
+                # Volatility indicator based on historical data
+                historical_volatility = price_data.pct_change().std() * np.sqrt(252) * 100  # Annualized
+                st.metric("Historical Volatility", f"{historical_volatility:.1f}%")
                 
         else:
             st.error("No valid ARIMA models could be fitted to the original data. Try different parameter ranges.")
@@ -799,4 +903,3 @@ if run_analysis_btn:
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
         st.info("Try a smaller degree, shorter date range, or different ticker.")
-        
