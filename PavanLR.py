@@ -1030,6 +1030,10 @@ if run_analysis_btn:
                     
             else:
                 st.warning("High and Open price data not available for analysis")
+
+    except Exception as main_ex:
+        st.error(f"Main pipeline error: {main_ex}")
+        st.info("Try a smaller degree, shorter date range, or different ticker.")
 # pages/4_📈_High_Open_Forecast.py
 import streamlit as st
 import yfinance as yf
@@ -1396,6 +1400,3 @@ if run_forecast_btn:
         st.error(f"Analysis failed: {str(e)}")
         st.info("Try adjusting ARIMA parameters or using a different ticker")
 
-    except Exception as main_ex:
-        st.error(f"Main pipeline error: {main_ex}")
-        st.info("Try a smaller degree, shorter date range, or different ticker.")
