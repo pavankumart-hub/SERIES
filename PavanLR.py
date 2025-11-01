@@ -34,7 +34,7 @@ with col2:
 
 # Price type selection
 price_type = st.sidebar.selectbox("Select Price Type", ["High", "Low", "Open", "Close", "Adj Close"])
-degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
+degree = st.sidebar.slider("Polynomial Degree", 1, 20, 3)
 
 # ARIMA parameters
 st.sidebar.header("ARIMA Parameters")
@@ -493,6 +493,7 @@ if run_analysis_btn:
             plt.xticks(rotation=45)
             plt.tight_layout()
             st.pyplot(fig)
+        
         # ARIMA Analysis on Original Stock Data
         st.header("ARIMA Analysis on Original Stock Data")
         
@@ -866,6 +867,7 @@ if run_analysis_btn:
             with trend_col2:
                 avg_daily_change = overall_trend / (forecast_steps - 1) if forecast_steps > 1 else 0
                 st.metric("Average Daily Change", f"{currency_symbol}{avg_daily_change:+.2f}")
+            
             # HIGH-OPEN PERCENTAGE ANALYSIS - NEW SECTION
             st.header("📊 High-Open Percentage Analysis")
             st.markdown("This analysis shows the daily price movement as percentage: `(High - Open) / Open * 100`")
@@ -1030,8 +1032,8 @@ if run_analysis_btn:
                     
             else:
                 st.warning("High and Open price data not available for analysis")
-              # HIGH-OPEN PERCENTAGE ANALYSIS - NEW SECTION
-# LOW-OPEN PERCENTAGE ANALYSIS - NEW SECTION
+            
+            # LOW-OPEN PERCENTAGE ANALYSIS - NEW SECTION
             st.header("📊 Low-Open Percentage Analysis")
             st.markdown("This analysis shows the daily price movement as percentage: `(Open - Low) / Open * 100`")
             
@@ -1188,7 +1190,8 @@ if run_analysis_btn:
                     st.warning("🔍 **Observation:** This stock shows moderate downward intraday volatility")
                     
             else:
-                st.warning("Low and Open price data not available for analysis")       
+                st.warning("Low and Open price data not available for analysis")
+        
     except Exception as main_ex:
         st.error(f"Main pipeline error: {main_ex}")
         st.info("Try a smaller degree, shorter date range, or different ticker.")
