@@ -18,8 +18,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="📈 Polynomial Stock Forecast (stable)", layout="wide")
-st.title("Polynomial Regression + ARIMA Stock Forecast")
-st.markdown("Center & scale date before polynomial transform to avoid numerical instability.")
+st.title("PAVAN-Polynomial Regression + ARIMA Stock Forecast")
+st.markdown("Live your Life as an Exclamation rather than Explanation-Sir Issac Newton")
 
 # Sidebar inputs
 st.sidebar.header("Settings")
@@ -34,7 +34,7 @@ with col2:
 
 # Price type selection
 price_type = st.sidebar.selectbox("Select Price Type", ["High", "Low", "Open", "Close", "Adj Close"])
-degree = st.sidebar.slider("Polynomial Degree", 1, 20, 3)
+degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 
 # ARIMA parameters
 st.sidebar.header("ARIMA Parameters")
