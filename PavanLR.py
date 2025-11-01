@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
 from statsmodels.tsa.stattools import kpss, adfuller
+from statsmodels.tsa.stattools import kpss, PhillipsPerron
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
@@ -260,15 +261,16 @@ if run_analysis_btn:
             else:
                 st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
         # Phillips-Perron Test for Residuals
+        # Phillips-Perron Test for Residuals
         st.subheader("Phillips-Perron Test - Stationarity Check (Residuals)")
         pp_stat, pp_p, pp_err = safe_pp_test(residuals)
 
         if pp_err:
             st.error(f"PP test error: {pp_err}")
         else:
-                st.write(f"**PP Test Statistic:** {pp_stat:.6f}")
+            st.write(f"**PP Test Statistic:** {pp_stat:.6f}")
             st.write(f"**PP p-value:** {pp_p:.6f}")
-    
+            
             if pp_p <= 0.05:
                 st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
             else:
