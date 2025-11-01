@@ -4,9 +4,10 @@ pandas
 numpy
 matplotlib
 scikit-learn
-statsmodels
+statsmodels>=0.13.0
 scipy
 plotly
+
 
 
 
