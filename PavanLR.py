@@ -107,7 +107,16 @@ def safe_adfuller(data):
         return adf_stat, adf_p, None
     except Exception as ex:
         return None, None, str(ex)
-
+        
+def safe_pp_test(data):
+    try:
+        pp_result = PhillipsPerron(data)
+        pp_stat = float(pp_result.stat)
+        pp_p = float(pp_result.pvalue)
+        return pp_stat, pp_p, None
+    except Exception as ex:
+        return None, None, str(ex)
+        
 def fit_arima_model(data, p, d, q):
     try:
         model = SARIMAX(data, order=(p, d, q), seasonal_order=(0, 0, 0, 0))
@@ -250,7 +259,20 @@ if run_analysis_btn:
                 st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
             else:
                 st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
-        
+        # Phillips-Perron Test for Residuals
+        st.subheader("Phillips-Perron Test - Stationarity Check (Residuals)")
+        pp_stat, pp_p, pp_err = safe_pp_test(residuals)
+
+        if pp_err:
+            st.error(f"PP test error: {pp_err}")
+        else:
+                st.write(f"**PP Test Statistic:** {pp_stat:.6f}")
+            st.write(f"**PP p-value:** {pp_p:.6f}")
+    
+            if pp_p <= 0.05:
+                st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
+            else:
+                st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
         # Residual Histogram with Skewness and Kurtosis
         st.subheader("Residual Distribution Analysis")
         
