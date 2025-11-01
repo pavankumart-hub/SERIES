@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
 from statsmodels.tsa.stattools import kpss, adfuller
-from statsmodels.tsa.stattools import kpss, PhillipsPerron
+pip install arch
+from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
@@ -111,12 +112,18 @@ def safe_adfuller(data):
         
 def safe_pp_test(data):
     try:
-        pp_result = PhillipsPerron(data)
-        pp_stat = float(pp_result.stat)
-        pp_p = float(pp_result.pvalue)
+        # Use arch package for Phillips-Perron test
+        pp_test = PhillipsPerron(data)
+        pp_stat = float(pp_test.stat)
+        pp_p = float(pp_test.pvalue)
         return pp_stat, pp_p, None
     except Exception as ex:
-        return None, None, str(ex)
+        # Fallback to ADF if PP fails
+        try:
+            adf_result = adfuller(data)
+            return adf_result[0], adf_result[1], f"PP failed, using ADF: {str(ex)}"
+        except Exception as ex2:
+            return None, None, f"Both PP and ADF failed: {str(ex2)}"
         
 def fit_arima_model(data, p, d, q):
     try:
@@ -261,20 +268,21 @@ if run_analysis_btn:
             else:
                 st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
         # Phillips-Perron Test for Residuals
-        # Phillips-Perron Test for Residuals
         st.subheader("Phillips-Perron Test - Stationarity Check (Residuals)")
         pp_stat, pp_p, pp_err = safe_pp_test(residuals)
 
         if pp_err:
-            st.error(f"PP test error: {pp_err}")
+            st.warning(f"Note: {pp_err}")
+            st.write(f"**Test Statistic:** {pp_stat:.6f}")
+            st.write(f"**p-value:** {pp_p:.6f}")
         else:
             st.write(f"**PP Test Statistic:** {pp_stat:.6f}")
             st.write(f"**PP p-value:** {pp_p:.6f}")
-            
-            if pp_p <= 0.05:
-                st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
-            else:
-                st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
+
+        if pp_p <= 0.05:
+            st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
+        else:
+            st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
         # Residual Histogram with Skewness and Kurtosis
         st.subheader("Residual Distribution Analysis")
         
