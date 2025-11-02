@@ -17,6 +17,8 @@ from datetime import datetime, timedelta
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.stats.diagnostic import acorr_ljungbox
+from scipy.stats import skew, jarque_bera
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -61,6 +63,26 @@ def safe_adfuller(data):
         return adf_stat, adf_p, None
     except Exception as ex:
         return None, None, str(ex)
+
+def safe_jarque_bera(data):
+    try:
+        jb_stat, jb_p = jarque_bera(data)
+        return float(jb_stat), float(jb_p), None
+    except Exception as ex:
+        return None, None, str(ex)
+
+def safe_ljungbox(data, max_lag=10):
+    try:
+        result = acorr_ljungbox(data, lags=[max_lag], return_df=True)
+        lb_stat = float(result['lb_stat'].iloc[0])
+        lb_p = float(result['lb_pvalue'].iloc[0])
+        return lb_stat, lb_p, None
+    except Exception as ex:
+        return None, None, str(ex)
+
+# =============================================================================
+# HIGH-OPEN ARIMA FORECAST SECTION
+# =============================================================================
 
 if run_forecast_btn:
     try:
@@ -157,7 +179,10 @@ if run_forecast_btn:
         plt.tight_layout()
         st.pyplot(fig2)
 
-        # ARIMA Modeling
+        # =============================================================================
+        # ARIMA MODELING SECTION
+        # =============================================================================
+        
         st.header("🎯 ARIMA Forecasting")
 
         with st.spinner("Fitting ARIMA model..."):
@@ -167,8 +192,16 @@ if run_forecast_btn:
                 st.error(f"ARIMA model fitting failed: {error}")
                 st.stop()
 
-            # Get fitted values
+            # Get fitted values and remove initial values based on differencing order
             fitted_values = model.fittedvalues
+            
+            # Remove first 'd' values due to differencing
+            if len(fitted_values) > d:
+                fitted_values_clean = fitted_values.iloc[d:]
+                fitted_dates_clean = high_open_data.index[len(high_open_data) - len(fitted_values) + d:]
+            else:
+                fitted_values_clean = fitted_values
+                fitted_dates_clean = high_open_data.index[len(high_open_data) - len(fitted_values):]
 
             # Forecast future values
             forecast = model.get_forecast(steps=forecast_days)
@@ -202,10 +235,8 @@ if run_forecast_btn:
                 high_open_data['High_Open_Pct'].iloc[-plot_days:],
                 label='Actual', linewidth=2, color='blue')
 
-        # Plot fitted values (may be shorter due to differencing)
-        start_idx = len(high_open_data) - len(fitted_values)
-        fitted_dates = high_open_data.index[start_idx:]
-        ax3.plot(fitted_dates, fitted_values,
+        # Plot cleaned fitted values
+        ax3.plot(fitted_dates_clean, fitted_values_clean,
                 label='ARIMA Fitted', linewidth=2, linestyle='--', color='red')
 
         ax3.axhline(y=0, color='black', linestyle='-', alpha=0.3)
@@ -325,18 +356,25 @@ if run_forecast_btn:
         else:
             st.success(f"**Moderate forecast volatility:** {forecast_volatility:.2f}% std dev")
 
-        # Model diagnostics
+        # =============================================================================
+        # MODEL DIAGNOSTICS SECTION
+        # =============================================================================
+        
         st.header("🔍 Model Diagnostics")
 
-        # Residuals analysis
+        # Residuals analysis - remove initial values based on differencing
         residuals = model.resid
+        if len(residuals) > d:
+            residuals_clean = residuals.iloc[d:]
+        else:
+            residuals_clean = residuals
 
         st.subheader("Residuals Analysis")
         col1, col2, col3, col4 = st.columns(4)
 
-        residual_mean = float(residuals.mean())
-        residual_std = float(residuals.std())
-        residual_skew = float(reskew(residuals.dropna()))
+        residual_mean = float(residuals_clean.mean())
+        residual_std = float(residuals_clean.std())
+        residual_skew = float(skew(residuals_clean.dropna()))
 
         with col1:
             st.metric("Residual Mean", f"{residual_mean:.4f}")
@@ -346,28 +384,79 @@ if run_forecast_btn:
             st.metric("Residual Skew", f"{residual_skew:.4f}")
         with col4:
             # Check if residuals are white noise
-            lb_test = acorr_ljungbox(residuals.dropna(), lags=[10], return_df=True)
-            lb_pvalue = float(lb_test['lb_pvalue'].iloc[0])
-            if lb_pvalue > 0.05:
+            lb_stat, lb_p, lb_err = safe_ljungbox(residuals_clean.dropna(), max_lag=10)
+            if lb_err:
+                st.error("LB Test Error")
+            elif lb_p > 0.05:
                 st.success("White Noise ✓")
             else:
                 st.error("Not White Noise ✗")
 
+        # Normality test
+        st.subheader("Normality Test")
+        jb_stat, jb_p, jb_err = safe_jarque_bera(residuals_clean.dropna())
+        
+        if jb_err:
+            st.error(f"Jarque-Bera test error: {jb_err}")
+        else:
+            st.write(f"**Jarque-Bera Statistic:** {jb_stat:.4f}")
+            st.write(f"**Jarque-Bera p-value:** {jb_p:.4f}")
+            if jb_p > 0.05:
+                st.success("✓ Residuals are normally distributed")
+            else:
+                st.warning("✗ Residuals are not normally distributed")
+
         # Residuals plot
+        st.subheader("Residuals Plots")
         fig5, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
-        ax1.plot(residuals.index, residuals, label='Residuals')
+        # Time series plot of residuals
+        residual_dates = high_open_data.index[len(high_open_data) - len(residuals_clean):]
+        ax1.plot(residual_dates, residuals_clean, label='Residuals', color='blue')
         ax1.axhline(0, color='red', linestyle='--', alpha=0.7)
         ax1.set_title('Model Residuals Over Time')
         ax1.legend()
         ax1.grid(alpha=0.3)
 
-        ax2.hist(residuals.dropna(), bins=30, alpha=0.7, color='skyblue', edgecolor='black')
+        # Histogram of residuals
+        ax2.hist(residuals_clean.dropna(), bins=30, alpha=0.7, color='skyblue', edgecolor='black', density=True)
+        
+        # Add normal distribution curve
+        from scipy.stats import norm
+        x = np.linspace(residuals_clean.min(), residuals_clean.max(), 100)
+        ax2.plot(x, norm.pdf(x, residual_mean, residual_std), 'r-', label='Normal Distribution')
+        
         ax2.set_title('Residuals Distribution')
+        ax2.legend()
         ax2.grid(alpha=0.3)
 
         plt.tight_layout()
         st.pyplot(fig5)
+
+        # Model quality assessment
+        st.subheader("Model Quality Assessment")
+        quality_checks = []
+        
+        # Stationarity check
+        if adf_p <= 0.05:
+            quality_checks.append("✓ Original data is stationary")
+        else:
+            quality_checks.append("✗ Original data is non-stationary")
+            
+        # White noise check
+        if lb_p > 0.05:
+            quality_checks.append("✓ Residuals are white noise")
+        else:
+            quality_checks.append("✗ Residuals show autocorrelation")
+            
+        # Normality check
+        if jb_p > 0.05:
+            quality_checks.append("✓ Residuals are normally distributed")
+        else:
+            quality_checks.append("✗ Residuals are not normally distributed")
+            
+        for check in quality_checks:
+            st.write(check)
 
     except Exception as e:
         st.error(f"Analysis failed: {str(e)}")
