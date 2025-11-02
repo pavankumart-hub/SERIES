@@ -26,7 +26,7 @@ st.markdown("Earning in the face of Risk-STOCK MARKET")
 st.markdown("Tests: ADF, KPSS, PP, Jarque-Bera, L-jung Box")
 
 # Sidebar inputs
-st.sidebar.header("📈INPUT-ARIMA ORIGINAL")
+st.sidebar.header("INPUT-ARIMA ORIGINAL")
 ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
 
 # Calendar date selection
@@ -1510,7 +1510,7 @@ st.title("📈 High-Open Percentage ARIMA Forecast")
 st.markdown("Model and forecast the `(High - Open) / Open * 100` percentage using ARIMA")
 
 # Sidebar inputs
-st.sidebar.header(""📈INPUT-ARIMA PERCENTAGE"")
+st.sidebar.header("INPUT-ARIMA PERCENTAGE")
 ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 
 col1, col2 = st.sidebar.columns(2)
