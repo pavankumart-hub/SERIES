@@ -854,10 +854,17 @@ if run_analysis_btn:
             ax.plot(price_data.index, price_data.values, label='Actual Prices', linewidth=2, alpha=0.7)
             
             # Plot fitted values (ARIMA predictions)
-            # Note: fitted_values might be shorter due to differencing
+            # Remove initial values based on differencing order (d)
             start_idx = len(price_data) - len(fitted_original_values)
-            ax.plot(price_data.index[start_idx:], fitted_original_values, 
-                   label='ARIMA Fitted Values', linewidth=2, linestyle='--')
+            d = best_original_model_info['d']
+            
+            # Remove first 'd' data points to avoid NaN values due to differencing
+            if len(fitted_original_values) > d:
+                ax.plot(price_data.index[start_idx+d:], fitted_original_values[d:], 
+                       label='ARIMA Fitted Values', linewidth=2, linestyle='--')
+            else:
+                ax.plot(price_data.index[start_idx:], fitted_original_values, 
+                       label='ARIMA Fitted Values', linewidth=2, linestyle='--')
             
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Price ({currency_symbol})')
@@ -941,20 +948,27 @@ if run_analysis_btn:
             # ARIMA Residuals Analysis for Original Data
             st.header("ARIMA Residuals Analysis for Original Stock Data")
             
-            # Get residuals from the best ARIMA model - FIXED: Handle numpy array properly
+            # Get residuals from the best ARIMA model
             arima_residuals = best_original_arima_model.resid
             
-            # Convert to pandas Series if it's a numpy array and remove NaN values
-            if isinstance(arima_residuals, np.ndarray):
-                arima_residuals_clean = pd.Series(arima_residuals).dropna()
-            else:
+            # Remove initial NaN values based on differencing order (d)
+            d = best_original_model_info['d']
+            if isinstance(arima_residuals, pd.Series):
                 arima_residuals_clean = arima_residuals.dropna()
+                # Remove first 'd' observations due to differencing
+                if len(arima_residuals_clean) > d:
+                    arima_residuals_clean = arima_residuals_clean.iloc[d:]
+            else:
+                # For numpy arrays
+                arima_residuals_clean = pd.Series(arima_residuals).dropna()
+                if len(arima_residuals_clean) > d:
+                    arima_residuals_clean = arima_residuals_clean.iloc[d:]
             
             # Residuals time plot
             st.subheader("ARIMA Residuals Time Series")
             fig, ax = plt.subplots(figsize=(12, 4))
             
-            # Get the corresponding dates for the residuals
+            # Get the corresponding dates for the residuals (adjust for removed values)
             residual_dates = price_data.index[len(price_data) - len(arima_residuals_clean):]
             ax.plot(residual_dates, arima_residuals_clean, label='ARIMA Residuals', linewidth=1)
             ax.axhline(0, linestyle='--', color='k')
