@@ -677,7 +677,14 @@ if run_analysis_btn:
         # Get last date and prepare for forecasting
         last_date = X_dates[-1][0]
         next_date = last_date + (1 / dates_range)  # Forecast only one day ahead
-
+       
+        # Print next date for debugging
+        st.write(f"Last normalized date: {last_date}")
+        st.write(f"Next normalized date: {next_date}")
+        
+        # Calculate actual next date
+        next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
+        st.write(f"Next actual date: {next_actual_date.strftime('%Y-%m-%d')}")
         # Create next day's features with user-provided open price
         next_features = np.array([[next_date, today_open]])
         next_poly = poly.transform(next_features)
