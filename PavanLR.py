@@ -183,7 +183,70 @@ if run_analysis_btn:
             else:
                 st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
         # Prepare X: center + scale ordinal dates
-    
+
+        # Date preprocessing and normalization
+        dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
+        dates_mean = float(dates.mean(axis=0)[0])
+        dates_max = float(dates.max(axis=0)[0])
+        dates_min = float(dates.min(axis=0)[0])
+        dates_range = dates_max - dates_min
+
+        if dates_range == 0:
+            st.error("All dates identical (unexpected).")
+            st.stop()
+
+        X = (dates - dates_mean) / dates_range
+
+        # Polynomial regression model
+        poly = PolynomialFeatures(degree=degree, include_bias=False)
+        X_poly = poly.fit_transform(X)
+        model = LinearRegression()
+        model.fit(X_poly, y)
+        y_pred = model.predict(X_poly)
+
+        # Forecast next day value
+        last_normalized_date = X[-1][0]  # Get last normalized date
+        next_normalized_date = last_normalized_date + (1 / dates_range)  # Add one day in normalized scale
+
+        # Create next day's features and apply polynomial transformation
+        next_day_features = np.array([[next_normalized_date]])
+        next_day_poly = poly.transform(next_day_features)
+
+        # Predict next day value
+        next_day_prediction = model.predict(next_day_poly)
+
+        # Streamlit display
+        st.subheader("📈 Next Day Forecast")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(
+                label="Current Price",
+                value=f"{currency_symbol}{y[-1]:.2f}"
+            )
+        with col2:
+            st.metric(
+                label="Predicted Price",
+                value=f"{currency_symbol}{next_day_prediction[0]:.2f}",
+                delta=f"{next_day_prediction[0] - y[-1]:.2f}"
+            )
+
+        # Additional forecast details
+        with st.expander("Forecast Details"):
+            st.write(f"**Model:** Polynomial Regression (Degree {degree})")
+            st.write(f"**Date Range:** {dates_range:.0f} days")
+            st.write(f"**Last available date:** {price_data.index[-1].strftime('%Y-%m-%d')}")
+            
+            # Calculate next actual date
+            next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
+            st.write(f"**Forecast date:** {next_actual_date.strftime('%Y-%m-%d')}")
+            
+            st.write(f"**Price change:** {currency_symbol}{next_day_prediction[0] - y[-1]:.2f}")
+            st.write(f"**Percent change:** {((next_day_prediction[0] - y[-1]) / y[-1] * 100):.2f}%")
+
+        # Optional: Show prediction confidence or model performance
+        st.info(f"*Forecast based on polynomial regression model with degree {degree}*")
+
         dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
         dates_mean = float(dates.mean(axis=0)[0])
         dates_max = float(dates.max(axis=0)[0])
