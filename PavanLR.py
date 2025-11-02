@@ -597,18 +597,8 @@ if run_analysis_btn:
             st.pyplot(fig)
 #Polynomial Regression with Multiple Features
 
-        st.header("📊 Polynomial Regression with Multiple Features")
-        
-        # User inputs
-        col1, col2 = st.columns(2)
-        with col1:
-                degree = st.slider("Polynomial Degree", 1, 5, 2)
-                target_var = st.selectbox("Select Target Variable (Y)", 
-                                        ['Close', 'High', 'Low', 'Volume'])
-        with col2:
-                use_open = st.checkbox("Include Today's Open Price", value=True)
-                forecast_days = st.number_input("Forecast Days Ahead", 1, 30, 1)
-        
+        st.header("📊 Polynomial Regression with Multiple Features") 
+             
         # Prepare features (dates as ordinal)
         dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
         dates_mean = float(dates.mean(axis=0)[0])
@@ -624,7 +614,7 @@ if run_analysis_btn:
         X_dates = (dates - dates_mean) / dates_range
         
         # Prepare target variable
-        y = price_data[target_var].values.reshape(-1, 1)
+        y = price_data.values.astype(float)
         
         # Prepare features matrix
         if use_open:
