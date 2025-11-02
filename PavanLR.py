@@ -143,42 +143,41 @@ if run_analysis_btn:
     currency_symbol = detect_currency(ticker)
     st.sidebar.info(f"Detected Currency: {currency_symbol}")
 
-        with st.spinner(f"Downloading {ticker}..."):
-            data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+    with st.spinner(f"Downloading {ticker}..."):
+    data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
-        if data is None or data.empty:
-            st.error("No data found. Check ticker symbol or date range.")
-            st.stop()
+    if data is None or data.empty:
+        st.error("No data found. Check ticker symbol or date range.")
+        st.stop()
 
-        # Check if both price columns exist
-        if price_type not in data.columns:
-            st.error(f"Price type '{price_type}' not found in data. Available columns: {list(data.columns)}")
-            st.stop()
-        
-        if price_type1 not in data.columns:
-            st.error(f"Price type '{price_type1}' not found in data. Available columns: {list(data.columns)}")
-            st.stop()
+    # Check if both price columns exist
+    if price_type not in data.columns:
+        st.error(f"Price type '{price_type}' not found in data. Available columns: {list(data.columns)}")
+        st.stop()
+    
+    if price_type1 not in data.columns:
+        st.error(f"Price type '{price_type1}' not found in data. Available columns: {list(data.columns)}")
+        st.stop()
 
-        # Extract and clean both price data series
-        price_data = data[price_type].copy()
-        price_data = price_data.dropna()
+    # Extract and clean both price data series
+    price_data = data[price_type].copy()
+    price_data = price_data.dropna()
+    
+    price_data1 = data[price_type1].copy()
+    price_data1 = price_data1.dropna()
+    
+    # Ensure both series have the same length after dropping NaN values
+    # Align both series to have the same dates
+    common_dates = price_data.index.intersection(price_data1.index)
+    price_data = price_data.loc[common_dates]
+    price_data1 = price_data1.loc[common_dates]
+    
+    n = len(price_data)
+    if n < 10:
+        st.error(f"Not enough common data points after cleaning ({n}). Increase date range or pick another ticker.")
+        st.stop()
         
-        price_data1 = data[price_type1].copy()
-        price_data1 = price_data1.dropna()
-        
-        # Ensure both series have the same length after dropping NaN values
-        # Align both series to have the same dates
-        common_dates = price_data.index.intersection(price_data1.index)
-        price_data = price_data.loc[common_dates]
-        price_data1 = price_data1.loc[common_dates]
-        
-        n = len(price_data)
-        if n < 10:
-            st.error(f"Not enough common data points after cleaning ({n}). Increase date range or pick another ticker.")
-            st.stop()
-            
-        st.success(f"Successfully loaded {n} data points for both price series")
-
+    st.success(f"Successfully loaded {n} data points for both price series")
         # show basics - FIXED: Extract scalar values for metrics
         col1, col2, col3 = st.columns(3)
         with col1:
