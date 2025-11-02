@@ -1461,6 +1461,6 @@ if run_analysis_btn:
             else:
                 st.warning("Low and Open price data not available for analysis")
         
-            except Exception as main_ex:
+        except Exception as main_ex:
                 st.error(f"Main pipeline error: {main_ex}")
                 st.info("Try a smaller degree, shorter date range, or different ticker.") 
