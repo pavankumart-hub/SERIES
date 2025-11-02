@@ -595,8 +595,9 @@ if run_analysis_btn:
             plt.xticks(rotation=45)
             plt.tight_layout()
             st.pyplot(fig)
+#Polynomial Regression with Multiple Features
 
-           st.header("📊 Polynomial Regression with Multiple Features")
+        st.header("📊 Polynomial Regression with Multiple Features")
         
         # User inputs
         col1, col2 = st.columns(2)
@@ -617,7 +618,7 @@ if run_analysis_btn:
         
         if dates_range == 0:
                 st.error("All dates identical (unexpected).")
-                return
+                st.stop()
         
         # Normalize dates
         X_dates = (dates - dates_mean) / dates_range
@@ -756,14 +757,6 @@ if run_analysis_btn:
         ax3.set_xlabel("Lag")
         plt.tight_layout()
         st.pyplot(fig3)
-        
-        # Q-Q Plot for normality
-        st.write("**Q-Q Plot for Normality:**")
-        fig4, ax4 = plt.subplots(figsize=(8, 6))
-        stats.probplot(residuals, dist="norm", plot=ax4)
-        ax4.set_title("Q-Q Plot of Residuals")
-        plt.tight_layout()
-        st.pyplot(fig4)
 
         # ARIMA Analysis on Original Stock Data
         st.header("ARIMA Analysis on Original Stock Data")
