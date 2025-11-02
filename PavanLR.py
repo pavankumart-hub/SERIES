@@ -635,7 +635,7 @@ if run_analysis_btn:
         
         # Prepare target variable
         y = price_data.values.astype(float)
-        open_prices = price_data1['Open'].values.reshape(-1, 1)
+        open_prices = price_data1.values.reshape(-1, 1)
         X = np.column_stack([X_dates, open_prices])
         
         # Polynomial features
