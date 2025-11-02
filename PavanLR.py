@@ -143,8 +143,7 @@ if run_analysis_btn:
     currency_symbol = detect_currency(ticker)
     st.sidebar.info(f"Detected Currency: {currency_symbol}")
 
-    # download data
-    try:
+try:
         with st.spinner(f"Downloading {ticker}..."):
             data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
