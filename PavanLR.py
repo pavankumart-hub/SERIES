@@ -1515,15 +1515,9 @@ ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    start_date = st.date_input("Start Date", 
-                              value=datetime(2008, 1, 1).date(),
-                              min_value=datetime(2000, 1, 1).date(),
-                              max_value=datetime.now().date())
+    start_date = st.date_input("Start Date", datetime(2008, 1, 1))
 with col2:
-    end_date = st.date_input("End Date", 
-                            value=datetime.now().date(),
-                            min_value=datetime(2000, 1, 1).date(),
-                            max_value=datetime.now().date())
+    end_date = st.date_input("End Date", datetime.now())
 # ARIMA parameters
 st.sidebar.header("ARIMA Parameters")
 p = st.sidebar.slider("AR Order (p)", 0, 5, 1)
