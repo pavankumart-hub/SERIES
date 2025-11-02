@@ -24,7 +24,7 @@ st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISS
 
 # Sidebar inputs
 st.sidebar.header("INPUT")
-ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
+ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
 
 # Calendar date selection
 col1, col2 = st.sidebar.columns(2)
