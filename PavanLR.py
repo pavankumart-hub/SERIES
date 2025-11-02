@@ -58,7 +58,7 @@ st.sidebar.header("ARIMA Parameters")
 p_range = st.sidebar.slider("P (AR) Range", 0, 5, (0, 2))
 q_range = st.sidebar.slider("Q (MA) Range", 0, 5, (0, 2))
 d_range = st.sidebar.slider("D (Differencing) Range", 0, 2, (0, 1))
-run_analysis_btn = st.sidebar.button("Run Complete Analysis")
+run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 
 # Function to detect currency based on ticker
 def detect_currency(ticker):
@@ -1526,7 +1526,7 @@ q = st.sidebar.slider("MA Order (q)", 0, 5, 1)
 
 forecast_days = st.sidebar.slider("Forecast Days", 1, 30, 5)
 
-run_forecast_btn = st.sidebar.button("Run High-Open ARIMA Forecast")
+run_forecast_btn = st.sidebar.button("Run High-Open ARIMA Forecast", type="primary")
 
 def fit_arima_model(data, p, d, q):
     try:
