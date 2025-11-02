@@ -184,6 +184,12 @@ if run_analysis_btn:
                 st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
         # Prepare X: center + scale ordinal dates
 
+        import streamlit as st
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+
         # Date preprocessing and normalization
         dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
         dates_mean = float(dates.mean(axis=0)[0])
@@ -215,6 +221,12 @@ if run_analysis_btn:
         # Predict next day value
         next_day_prediction = model.predict(next_day_poly)
 
+        # Convert to scalar values to avoid numpy array formatting issues
+        current_price = float(y[-1]) if hasattr(y[-1], '__iter__') else y[-1]
+        predicted_price = float(next_day_prediction[0])
+        price_change = predicted_price - current_price
+        percent_change = (price_change / current_price) * 100
+
         # Streamlit display
         st.subheader("📈 Next Day Forecast")
 
@@ -222,13 +234,13 @@ if run_analysis_btn:
         with col1:
             st.metric(
                 label="Current Price",
-                value=f"{currency_symbol}{y[-1]:.2f}"
+                value=f"{currency_symbol}{current_price:.2f}"
             )
         with col2:
             st.metric(
                 label="Predicted Price",
-                value=f"{currency_symbol}{next_day_prediction[0]:.2f}",
-                delta=f"{next_day_prediction[0] - y[-1]:.2f}"
+                value=f"{currency_symbol}{predicted_price:.2f}",
+                delta=f"{price_change:.2f}"
             )
 
         # Additional forecast details
@@ -241,8 +253,8 @@ if run_analysis_btn:
             next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
             st.write(f"**Forecast date:** {next_actual_date.strftime('%Y-%m-%d')}")
             
-            st.write(f"**Price change:** {currency_symbol}{next_day_prediction[0] - y[-1]:.2f}")
-            st.write(f"**Percent change:** {((next_day_prediction[0] - y[-1]) / y[-1] * 100):.2f}%")
+            st.write(f"**Price change:** {currency_symbol}{price_change:.2f}")
+            st.write(f"**Percent change:** {percent_change:.2f}%")
 
         # Optional: Show prediction confidence or model performance
         st.info(f"*Forecast based on polynomial regression model with degree {degree}*")
