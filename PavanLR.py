@@ -596,8 +596,7 @@ if run_analysis_btn:
             plt.tight_layout()
             st.pyplot(fig)
 
-    def polynomial_regression_forecast():
-        st.header("📊 Polynomial Regression with Multiple Features")
+           st.header("📊 Polynomial Regression with Multiple Features")
         
         # User inputs
         col1, col2 = st.columns(2)
@@ -766,8 +765,6 @@ if run_analysis_btn:
         plt.tight_layout()
         st.pyplot(fig4)
 
-# Call the function
-        polynomial_regression_forecast()
         # ARIMA Analysis on Original Stock Data
         st.header("ARIMA Analysis on Original Stock Data")
         
