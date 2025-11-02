@@ -757,7 +757,7 @@ if run_analysis_btn:
                 else:
                         st.warning("Residuals not normal (p ≤ 0.05)")
         
-          with col2:
+        with col2:
                 # Autocorrelation Test (Ljung-Box)
                 st.write("**Autocorrelation Test (Ljung-Box):**")
                 lb_result = acorr_ljungbox(residuals, lags=10, return_df=True)
