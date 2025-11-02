@@ -664,14 +664,16 @@ if run_analysis_btn:
         with col2:
                 st.metric("MSE", f"{mse:.4f}")
 
-                # Forecast next day value
+        # Forecast next day value
         st.subheader("🔮 Next Day Forecast")
 
-        # Get user input for today's open price
-        today_open = st.number_input(f"Enter Today's Open Price ({currency_symbol})", 
-                                   value=float(open_prices[-1][0]), 
-                                   min_value=0.0, 
-                                   step=0.1)
+        # Get user input for today's open price from sidebar
+        st.sidebar.header("Forecast Input")
+        today_open = st.sidebar.number_input(f"Enter Today's Open Price ({currency_symbol})", 
+                                           value=float(open_prices[-1][0]), 
+                                           min_value=0.0, 
+                                           step=0.1,
+                                           key="today_open_input")
 
         # Get last date and prepare for forecasting
         last_date = X_dates[-1][0]
@@ -746,12 +748,12 @@ if run_analysis_btn:
         col1, col2 = st.columns(2)
         
         with col1:
-                # Normality Test (Shapiro-Wilk)
-                st.write("**Normality Test (Shapiro-Wilk):**")
-                shapiro_stat, shapiro_p = stats.shapiro(residuals)
-                st.write(f"Test Statistic: {shapiro_stat:.4f}")
-                st.write(f"P-value: {shapiro_p:.4f}")
-                if shapiro_p > 0.05:
+                # Normality Test (Jarque-Bera)
+                st.write("**Normality Test (Jarque-Bera):**")
+                jb_stat, jb_p = stats.jarque_bera(residuals)
+                st.write(f"Test Statistic: {jb_stat:.4f}")
+                st.write(f"P-value: {jb_p:.4f}")
+                if jb_p > 0.05:
                         st.success("Residuals appear normal (p > 0.05)")
                 else:
                         st.warning("Residuals not normal (p ≤ 0.05)")
