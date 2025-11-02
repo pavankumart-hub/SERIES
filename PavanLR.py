@@ -39,6 +39,12 @@ with col2:
 # Price type selection
 price_type = st.sidebar.selectbox("Select Dependent Price Type (Y)", ["High", "Low", "Open", "Close", "Adj Close"])
 price_type1 = st.sidebar.selectbox("Select Independent Price Type (X)", ["High", "Low", "Open", "Close", "Adj Close"])
+st.sidebar.header("Forecast Input")
+today_open_input = st.sidebar.number_input(f"Enter Today's Open Price", 
+                                       value=100.0, 
+                                       min_value=0.0, 
+                                       step=0.1,
+                                       key="today_open_input")
 degree = st.sidebar.slider("Polynomial Degree", 1, 20, 3)
 
 # ARIMA parameters
@@ -46,7 +52,6 @@ st.sidebar.header("ARIMA Parameters")
 p_range = st.sidebar.slider("P (AR) Range", 0, 5, (0, 2))
 q_range = st.sidebar.slider("Q (MA) Range", 0, 5, (0, 2))
 d_range = st.sidebar.slider("D (Differencing) Range", 0, 2, (0, 1))
-
 run_analysis_btn = st.sidebar.button("Run Complete Analysis")
 
 # Function to detect currency based on ticker
@@ -667,13 +672,7 @@ if run_analysis_btn:
         # Forecast next day value
         st.subheader("🔮 Next Day Forecast")
 
-        # Get user input for today's open price from sidebar
-        st.sidebar.header("Forecast Input")
-        today_open = st.sidebar.number_input(f"Enter Today's Open Price ({currency_symbol})", 
-                                           value=float(open_prices[-1][0]), 
-                                           min_value=0.0, 
-                                           step=0.1,
-                                           key="today_open_input")
+        today_open = today_open_input
 
         # Get last date and prepare for forecasting
         last_date = X_dates[-1][0]
@@ -750,7 +749,7 @@ if run_analysis_btn:
         with col1:
                 # Normality Test (Jarque-Bera)
                 st.write("**Normality Test (Jarque-Bera):**")
-                jb_stat, jb_p = stats.jarque_bera(residuals)
+                jb_stat, jb_p = jarque_bera(residuals)
                 st.write(f"Test Statistic: {jb_stat:.4f}")
                 st.write(f"P-value: {jb_p:.4f}")
                 if jb_p > 0.05:
