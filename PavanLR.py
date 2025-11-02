@@ -425,13 +425,13 @@ if run_analysis_btn:
             fig, ax = plt.subplots(figsize=(12, 6))
             
             # Plot actual residuals
-            ax.plot(price_data.index, residuals, label='Actual Residuals', linewidth=2, alpha=0.7)
+            ax.plot(price_data.index, residuals, label='Actual Residuals', linewidth=2, alpha=0.7,color="red")
             
             # Plot fitted residuals (ARIMA predictions)
             # Note: fitted_residuals might be shorter due to differencing
             start_idx = len(residuals) - len(fitted_residuals)
             ax.plot(price_data.index[start_idx:], fitted_residuals, 
-                   label='ARIMA Fitted Residuals', linewidth=2, linestyle='--')
+                   label='ARIMA Fitted Residuals', linewidth=2,color="green")
             
             ax.axhline(0, linestyle='-', color='k', alpha=0.3)
             ax.set_xlabel('Date')
