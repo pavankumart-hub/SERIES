@@ -1199,13 +1199,13 @@ if run_analysis_btn:
                 st.subheader("Recent Performance (Last 30 Days)")
                 recent_data = low_open_data.tail(30)
                 recent_avg = recent_data['Low_Open_Pct'].mean()
-                
+                recent_positive = (recent_data['High_Open_Pct'] > 0).sum()
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Recent Average %", f"{recent_avg:.2f}%", 
                              f"{(recent_avg - avg_pct):+.2f}% vs overall")
                 with col2:
-                    st.metric("Recent Days > 0", f"{positive_days}/30 ({positive_days/30*100:.1f}%)")
+                    st.metric("Recent Days > 0", f"{recent_positive}/30 ({recent_positive/30*100:.1f}%)")
                 
                 # Trading insights
                 st.subheader("💡 Trading Insights")
