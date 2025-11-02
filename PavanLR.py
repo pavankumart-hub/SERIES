@@ -615,6 +615,7 @@ if run_analysis_btn:
             plt.xticks(rotation=45)
             plt.tight_layout()
             st.pyplot(fig)
+            
 #Polynomial Regression with Multiple Features
 
         st.header("📊 Polynomial Regression with Multiple Features") 
@@ -662,44 +663,57 @@ if run_analysis_btn:
                 st.metric("R² Score", f"{r2:.4f}")
         with col2:
                 st.metric("MSE", f"{mse:.4f}")
-        with col3:
-                st.metric("RMSE", f"{rmse:.4f}")
-        
-        # Forecast future values
-        st.subheader("🔮 Future Forecast")
-        
+
+                # Forecast next day value
+        st.subheader("🔮 Next Day Forecast")
+
+        # Get user input for today's open price
+        today_open = st.number_input(f"Enter Today's Open Price ({currency_symbol})", 
+                                   value=float(open_prices[-1][0]), 
+                                   min_value=0.0, 
+                                   step=0.1)
+
         # Get last date and prepare for forecasting
         last_date = X_dates[-1][0]
-        last_open = open_prices[-1][0] if use_open else None
-        
-        forecasts = []
-        forecast_dates = []
-        
-        for i in range(1, forecast_days + 1):
-                next_date = last_date + (i / dates_range)
-                if use_open:
-                        # For simplicity, using last known open price (in real scenario, you'd need future open prices)
-                        next_features = np.array([[next_date, last_open]])
-                else:
-                        next_features = np.array([[next_date]])
-                
-                next_poly = poly.transform(next_features)
-                next_pred = model.predict(next_poly)
-                forecasts.append(float(next_pred[0]))
-                
-                # Calculate actual future date
-                future_date = price_data.index[-1] + pd.Timedelta(days=i)
-                forecast_dates.append(future_date)
-        
-        # Display forecasts
-        forecast_df = pd.DataFrame({
-                'Date': forecast_dates,
-                f'Predicted {target_var}': forecasts
-        })
-        st.dataframe(forecast_df.style.format({
-                f'Predicted {target_var}': '{:.2f}'
-        }))
-        
+        next_date = last_date + (1 / dates_range)  # Forecast only one day ahead
+
+        # Create next day's features with user-provided open price
+        next_features = np.array([[next_date, today_open]])
+        next_poly = poly.transform(next_features)
+        next_pred = model.predict(next_poly)
+        forecast_value = float(next_pred[0])
+
+        # Calculate actual next date
+        next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
+
+        # Display forecast
+        col1, col2, col3 = st.columns(3)
+        with col1:
+                st.metric(
+                        "Today's Open",
+                        f"{currency_symbol}{today_open:.2f}"
+                )
+        with col2:
+                st.metric(
+                        "Predicted Price",
+                        f"{currency_symbol}{forecast_value:.2f}",
+                        delta=f"{forecast_value - today_open:.2f}"
+                )
+        with col3:
+                percent_change = ((forecast_value - today_open) / today_open) * 100
+                st.metric(
+                        "Expected Change",
+                        f"{percent_change:+.2f}%"
+                )
+
+        # Additional forecast details
+        with st.expander("Forecast Details"):
+                st.write(f"**Model:** Polynomial Regression (Degree {degree})")
+                st.write(f"**Forecast Date:** {next_actual_date.strftime('%Y-%m-%d')}")
+                st.write(f"**Input Open Price:** {currency_symbol}{today_open:.2f}")
+                st.write(f"**Predicted Price:** {currency_symbol}{forecast_value:.2f}")
+                st.write(f"**Expected Gain/Loss:** {currency_symbol}{forecast_value - today_open:+.2f}")
+                st.write(f"**Percentage Change:** {percent_change:+.2f}%")
         # Plotting section
         st.subheader("📊 Diagnostic Plots")
         
