@@ -1511,7 +1511,7 @@ st.markdown("Model and forecast the `(High - Open) / Open * 100` percentage usin
 
 # Sidebar inputs
 st.sidebar.header("Settings")
-ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
+ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 
 col1, col2 = st.sidebar.columns(2)
 with col1:
@@ -1718,7 +1718,7 @@ if run_forecast_btn:
         fig3, ax3 = plt.subplots(figsize=(12, 6))
 
         # Plot last 60 days for clarity
-        plot_days = len(high_open_data)
+        plot_days = min(100,len(high_open_data))
         ax3.plot(high_open_data.index[-plot_days:],
                 high_open_data['High_Open_Pct'].iloc[-plot_days:],
                 label='Actual', linewidth=2, color='blue')
@@ -1762,7 +1762,7 @@ if run_forecast_btn:
         fig4, ax4 = plt.subplots(figsize=(12, 6))
 
         # Plot historical data (last 30 days)
-        hist_days = len(high_open_data)
+        hist_days = min(100,len(high_open_data))
         ax4.plot(high_open_data.index[-hist_days:],
                 high_open_data['High_Open_Pct'].iloc[-hist_days:],
                 label='Historical', linewidth=2, color='blue')
