@@ -144,7 +144,7 @@ if run_analysis_btn:
     st.sidebar.info(f"Detected Currency: {currency_symbol}")
 
     with st.spinner(f"Downloading {ticker}..."):
-    data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+        data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
     if data is None or data.empty:
         st.error("No data found. Check ticker symbol or date range.")
