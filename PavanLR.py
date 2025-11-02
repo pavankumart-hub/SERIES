@@ -23,6 +23,7 @@ st.title("Polynomial Regression + ARIMA Stock Forecast")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
 st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PAVAN KUMAR THOTA")
 st.markdown("Earning in the face of Risk-STOCK MARKET")
+st.markdown("Tests: ADF, KPSS, PP, Jarque-Bera, L-jung Box")
 
 # Sidebar inputs
 st.sidebar.header("INPUT")
@@ -229,7 +230,7 @@ if run_analysis_btn:
 
         # Residual time plot
         fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot(price_data.index, residuals, label="Residuals")
+        ax.plot(price_data.index, residuals, label="Residuals",color="red")
         ax.axhline(0, linestyle="--", color="k")
         ax.set_xlabel("Date")
         ax.set_ylabel(f"Residual ({currency_symbol})")
@@ -242,9 +243,9 @@ if run_analysis_btn:
         # ACF and PACF plots for residuals
         st.subheader("ACF and PACF Plots for Residuals")
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-        plot_acf(residuals, ax=ax1, lags=20)
+        plot_acf(residuals, ax=ax1, lags=20. color="green")
         ax1.set_title("Autocorrelation Function (ACF)")
-        plot_pacf(residuals, ax=ax2, lags=20)
+        plot_pacf(residuals, ax=ax2, lags=20,color="orange")
         ax2.set_title("Partial Autocorrelation Function (PACF)")
         plt.tight_layout()
         st.pyplot(fig)
@@ -303,7 +304,7 @@ if run_analysis_btn:
         
         # Plot histogram
         fig, ax = plt.subplots(figsize=(10, 6))
-        n_bins, bins, patches = ax.hist(residuals, bins=30, density=True, alpha=0.7, color='skyblue', edgecolor='black')
+        n_bins, bins, patches = ax.hist(residuals, bins=30, density=True, alpha=0.7, color='red', edgecolor='black')
         
         # Add normal distribution curve for comparison
         from scipy.stats import norm
@@ -312,7 +313,7 @@ if run_analysis_btn:
         p = norm.pdf(x, residual_mean, residual_std)
         ax.plot(x, p, 'k', linewidth=2, label='Normal Distribution')
         
-        ax.axvline(residual_mean, color='red', linestyle='--', linewidth=2, label=f'Mean: {residual_mean:.4f}')
+        ax.axvline(residual_mean, color='green', linestyle='--', linewidth=2, label=f'Mean: {residual_mean:.4f}')
         ax.set_xlabel(f'Residual Value ({currency_symbol})')
         ax.set_ylabel('Density')
         ax.set_title('Residual Distribution Histogram')
