@@ -38,6 +38,7 @@ with col2:
 
 # Price type selection
 price_type = st.sidebar.selectbox("Select Price Type", ["High", "Low", "Open", "Close", "Adj Close"])
+price_type1= st.sidebar.selectbox("Select Price Type", ["High", "Low", "Open", "Close", "Adj Close"])
 degree = st.sidebar.slider("Polynomial Degree", 1, 20, 3)
 
 # ARIMA parameters
@@ -153,6 +154,8 @@ if run_analysis_btn:
 
         price_data = data[price_type].copy()
         price_data = price_data.dropna()
+        price_data1 = data[price_type1].copy()
+        price_data1 = price_data1.dropna()     
         n = len(price_data)
         if n < 10:
             st.error(f"Not enough data points ({n}). Increase date range or pick another ticker.")
@@ -615,13 +618,8 @@ if run_analysis_btn:
         
         # Prepare target variable
         y = price_data.values.astype(float)
-        
-        # Prepare features matrix
-        if use_open:
-                open_prices = price_data['Open'].values.reshape(-1, 1)
-                X = np.column_stack([X_dates, open_prices])
-        else:
-                X = X_dates
+        open_prices = price_data1['Open'].values.reshape(-1, 1)
+        X = np.column_stack([X_dates, open_prices])
         
         # Polynomial features
         poly = PolynomialFeatures(degree=degree, include_bias=False)
