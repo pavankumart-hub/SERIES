@@ -201,7 +201,28 @@ if run_analysis_btn:
         model = LinearRegression()
         model.fit(X_poly, y)
         y_pred = model.predict(X_poly)
+# Forecast next day value
+        last_date = X[-1]
+        next_date = last_date + 1
+        next_day_features = np.array([[next_date]])
+        next_day_poly = poly.transform(next_day_features)
+        next_day_prediction = model.predict(next_day_poly)
 
+# Streamlit display
+        st.subheader("Next Day Forecast")
+        st.metric(
+            label="Predicted Price",
+            value=f"{currency_symbol}{next_day_prediction[0]:.2f}",
+            delta=f"{next_day_prediction[0] - y[-1]:.2f}"  # Change from current price
+)
+
+# Optional: Additional information
+        with st.expander("Forecast Details"):
+            st.write(f"**Model:** Polynomial Regression (Degree {degree})")
+            st.write(f"**Last available date:** {last_date}")
+            st.write(f"**Forecast date:** {next_date}")
+            st.write(f"**Current price:** {currency_symbol}{y[-1]:.2f}")
+            st.write(f"**Predicted price:** {currency_symbol}{next_day_prediction[0]:.2f}")
         # Metrics - FIXED: Ensure we're using scalar values
         rmse = float(np.sqrt(mean_squared_error(y, y_pred)))
         r2 = float(r2_score(y, y_pred))
