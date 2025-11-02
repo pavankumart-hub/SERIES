@@ -18,12 +18,12 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="📈 Polynomial Stock Forecast (stable)", layout="wide")
+st.set_page_config(page_title="📈 PAVAN-HYBRID ARIMA Stock Forecast (stable)", layout="wide")
 st.title("PAVAN-Polynomial Regression + ARIMA Stock Forecast")
-st.markdown("Live your Life as an Exclamation rather than an Explanation-Sir Issac Newton")
+st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
 
 # Sidebar inputs
-st.sidebar.header("Settings")
+st.sidebar.header("INPUT")
 ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 
 # Calendar date selection
