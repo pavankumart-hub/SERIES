@@ -143,7 +143,6 @@ if run_analysis_btn:
     currency_symbol = detect_currency(ticker)
     st.sidebar.info(f"Detected Currency: {currency_symbol}")
 
-try:
         with st.spinner(f"Downloading {ticker}..."):
             data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
@@ -179,10 +178,6 @@ try:
             st.stop()
             
         st.success(f"Successfully loaded {n} data points for both price series")
-
-except Exception as e:
-        st.error(f"Error downloading data: {str(e)}")
-        st.stop()
 
         # show basics - FIXED: Extract scalar values for metrics
         col1, col2, col3 = st.columns(3)
