@@ -352,7 +352,7 @@ if run_analysis_btn:
         if pp_p <= 0.05:
             st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
         else:
-            st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
+            st.error("✗ Residuals are Unit Root-Non-Stationary (p-value > 0.05)")
         # Residual Histogram with Skewness and Kurtosis
         st.subheader("Residual Distribution Analysis")
         
@@ -595,7 +595,179 @@ if run_analysis_btn:
             plt.xticks(rotation=45)
             plt.tight_layout()
             st.pyplot(fig)
+
+def polynomial_regression_forecast():
+        st.header("📊 Polynomial Regression with Multiple Features")
         
+        # User inputs
+        col1, col2 = st.columns(2)
+        with col1:
+                degree = st.slider("Polynomial Degree", 1, 5, 2)
+                target_var = st.selectbox("Select Target Variable (Y)", 
+                                        ['Close', 'High', 'Low', 'Volume'])
+        with col2:
+                use_open = st.checkbox("Include Today's Open Price", value=True)
+                forecast_days = st.number_input("Forecast Days Ahead", 1, 30, 1)
+        
+        # Prepare features (dates as ordinal)
+        dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
+        dates_mean = float(dates.mean(axis=0)[0])
+        dates_max = float(dates.max(axis=0)[0])
+        dates_min = float(dates.min(axis=0)[0])
+        dates_range = dates_max - dates_min
+        
+        if dates_range == 0:
+                st.error("All dates identical (unexpected).")
+                return
+        
+        # Normalize dates
+        X_dates = (dates - dates_mean) / dates_range
+        
+        # Prepare target variable
+        y = price_data[target_var].values.reshape(-1, 1)
+        
+        # Prepare features matrix
+        if use_open:
+                open_prices = price_data['Open'].values.reshape(-1, 1)
+                X = np.column_stack([X_dates, open_prices])
+        else:
+                X = X_dates
+        
+        # Polynomial features
+        poly = PolynomialFeatures(degree=degree, include_bias=False)
+        X_poly = poly.fit_transform(X)
+        
+        # Train model
+        model = LinearRegression()
+        model.fit(X_poly, y)
+        y_pred = model.predict(X_poly)
+        
+        # Calculate residuals
+        residuals = y.flatten() - y_pred.flatten()
+        
+        # Model performance
+        r2 = r2_score(y, y_pred)
+        mse = mean_squared_error(y, y_pred)
+        rmse = np.sqrt(mse)
+        
+        # Display model performance
+        st.subheader("📈 Model Performance")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+                st.metric("R² Score", f"{r2:.4f}")
+        with col2:
+                st.metric("MSE", f"{mse:.4f}")
+        with col3:
+                st.metric("RMSE", f"{rmse:.4f}")
+        
+        # Forecast future values
+        st.subheader("🔮 Future Forecast")
+        
+        # Get last date and prepare for forecasting
+        last_date = X_dates[-1][0]
+        last_open = open_prices[-1][0] if use_open else None
+        
+        forecasts = []
+        forecast_dates = []
+        
+        for i in range(1, forecast_days + 1):
+                next_date = last_date + (i / dates_range)
+                if use_open:
+                        # For simplicity, using last known open price (in real scenario, you'd need future open prices)
+                        next_features = np.array([[next_date, last_open]])
+                else:
+                        next_features = np.array([[next_date]])
+                
+                next_poly = poly.transform(next_features)
+                next_pred = model.predict(next_poly)
+                forecasts.append(float(next_pred[0]))
+                
+                # Calculate actual future date
+                future_date = price_data.index[-1] + pd.Timedelta(days=i)
+                forecast_dates.append(future_date)
+        
+        # Display forecasts
+        forecast_df = pd.DataFrame({
+                'Date': forecast_dates,
+                f'Predicted {target_var}': forecasts
+        })
+        st.dataframe(forecast_df.style.format({
+                f'Predicted {target_var}': '{:.2f}'
+        }))
+        
+        # Plotting section
+        st.subheader("📊 Diagnostic Plots")
+        
+        # Residuals Line Chart
+        fig1, ax1 = plt.subplots(figsize=(12, 4))
+        ax1.plot(price_data.index, residuals, color='red', linewidth=1, label="Residuals")
+        ax1.axhline(0, linestyle='--', color='black', alpha=0.7)
+        ax1.set_xlabel("Date")
+        ax1.set_ylabel(f"Residuals ({currency_symbol})")
+        ax1.set_title("Residuals Over Time")
+        ax1.legend()
+        ax1.grid(alpha=0.3)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        st.pyplot(fig1)
+        
+        # Residuals Histogram
+        fig2, ax2 = plt.subplots(figsize=(10, 4))
+        ax2.hist(residuals, bins=30, color='red', alpha=0.7, edgecolor='black')
+        ax2.set_xlabel(f"Residuals ({currency_symbol})")
+        ax2.set_ylabel("Frequency")
+        ax2.set_title("Distribution of Residuals")
+        ax2.grid(alpha=0.3)
+        plt.tight_layout()
+        st.pyplot(fig2)
+        
+        # Statistical Tests
+        st.subheader("📋 Statistical Tests")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+                # Normality Test (Shapiro-Wilk)
+                st.write("**Normality Test (Shapiro-Wilk):**")
+                shapiro_stat, shapiro_p = stats.shapiro(residuals)
+                st.write(f"Test Statistic: {shapiro_stat:.4f}")
+                st.write(f"P-value: {shapiro_p:.4f}")
+                if shapiro_p > 0.05:
+                        st.success("Residuals appear normal (p > 0.05)")
+                else:
+                        st.warning("Residuals not normal (p ≤ 0.05)")
+        
+        with col2:
+                # Autocorrelation Test (Ljung-Box)
+                st.write("**Autocorrelation Test (Ljung-Box):**")
+                lb_stat, lb_p = sm.stats.acorr_ljungbox(residuals, lags=10, return_df=False)
+                st.write(f"Test Statistic: {lb_stat[-1]:.4f}")
+                st.write(f"P-value: {lb_p[-1]:.4f}")
+                if lb_p[-1] > 0.05:
+                        st.success("No significant autocorrelation (p > 0.05)")
+                else:
+                        st.warning("Significant autocorrelation present (p ≤ 0.05)")
+        
+        # ACF Plot
+        st.write("**Autocorrelation Function (ACF):**")
+        fig3, ax3 = plt.subplots(figsize=(10, 4))
+        sm.graphics.tsa.plot_acf(residuals, ax=ax3, lags=20, alpha=0.05)
+        ax3.set_title("Autocorrelation Function of Residuals")
+        ax3.set_ylabel("Correlation")
+        ax3.set_xlabel("Lag")
+        plt.tight_layout()
+        st.pyplot(fig3)
+        
+        # Q-Q Plot for normality
+        st.write("**Q-Q Plot for Normality:**")
+        fig4, ax4 = plt.subplots(figsize=(8, 6))
+        stats.probplot(residuals, dist="norm", plot=ax4)
+        ax4.set_title("Q-Q Plot of Residuals")
+        plt.tight_layout()
+        st.pyplot(fig4)
+
+# Call the function
+polynomial_regression_forecast()
         # ARIMA Analysis on Original Stock Data
         st.header("ARIMA Analysis on Original Stock Data")
         
