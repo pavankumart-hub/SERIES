@@ -184,11 +184,6 @@ if run_analysis_btn:
                 st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
         # Prepare X: center + scale ordinal dates
 
-        import streamlit as st
-import numpy as np
-import pandas as pd
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
 
         # Date preprocessing and normalization
         dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
