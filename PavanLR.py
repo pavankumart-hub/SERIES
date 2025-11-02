@@ -1,4 +1,4 @@
-# streamlit_app.py
+ # streamlit_app.py
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -596,7 +596,7 @@ if run_analysis_btn:
             plt.tight_layout()
             st.pyplot(fig)
 
-def polynomial_regression_forecast():
+    def polynomial_regression_forecast():
         st.header("📊 Polynomial Regression with Multiple Features")
         
         # User inputs
@@ -767,7 +767,7 @@ def polynomial_regression_forecast():
         st.pyplot(fig4)
 
 # Call the function
-polynomial_regression_forecast()
+        polynomial_regression_forecast()
         # ARIMA Analysis on Original Stock Data
         st.header("ARIMA Analysis on Original Stock Data")
         
