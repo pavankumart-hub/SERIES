@@ -760,7 +760,7 @@ if run_analysis_btn:
         with col2:
                 # Autocorrelation Test (Ljung-Box)
                 st.write("**Autocorrelation Test (Ljung-Box):**")
-                lb_stat, lb_p = sm.stats.acorr_ljungbox(residuals, lags=10, return_df=False)
+                lb_stat, lb_p = acorr_ljungbox(residuals, lags=10, return_df=False)
                 st.write(f"Test Statistic: {lb_stat[-1]:.4f}")
                 st.write(f"P-value: {lb_p[-1]:.4f}")
                 if lb_p[-1] > 0.05:
@@ -771,7 +771,7 @@ if run_analysis_btn:
         # ACF Plot
         st.write("**Autocorrelation Function (ACF):**")
         fig3, ax3 = plt.subplots(figsize=(10, 4))
-        sm.graphics.tsa.plot_acf(residuals, ax=ax3, lags=20, alpha=0.05)
+        plot_acf(residuals, ax=ax3, lags=20, alpha=0.05)
         ax3.set_title("Autocorrelation Function of Residuals")
         ax3.set_ylabel("Correlation")
         ax3.set_xlabel("Lag")
