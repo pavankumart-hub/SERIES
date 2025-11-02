@@ -155,6 +155,16 @@ if run_analysis_btn:
             st.error(f"Not enough data points ({n}). Increase date range or pick another ticker.")
             st.stop()
 
+        # show basics - FIXED: Extract scalar values for metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            current_price = float(price_data.iloc[-1])
+            st.metric(f"Current {price_type} Price", f"{currency_symbol}{current_price:.2f}")
+        with col2:
+            st.metric("Data Points", n)
+        with col3:
+            actual_days = (price_data.index[-1] - price_data.index[0]).days
+            st.metric("Analysis Period (days)", actual_days)
         # KPSS Test on original data
         st.subheader("KPSS Test - Stationarity Check (Original Data)")
         kpss_stat, kpss_p, kpss_critical_values, kpss_err = safe_kpss(price_data)
@@ -169,18 +179,6 @@ if run_analysis_btn:
                 st.error("✗ Data is Difference-stationary (test statistic > 5% critical value)")
             else:
                 st.success("✓ Data appears Trend-stationary (test statistic < 5% critical value)")
-
-        # show basics - FIXED: Extract scalar values for metrics
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            current_price = float(price_data.iloc[-1])
-            st.metric(f"Current {price_type} Price", f"{currency_symbol}{current_price:.2f}")
-        with col2:
-            st.metric("Data Points", n)
-        with col3:
-            actual_days = (price_data.index[-1] - price_data.index[0]).days
-            st.metric("Analysis Period (days)", actual_days)
-
         # Prepare X: center + scale ordinal dates
         dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
         dates_mean = float(dates.mean(axis=0)[0])
@@ -1199,7 +1197,7 @@ if run_analysis_btn:
                 st.subheader("Recent Performance (Last 30 Days)")
                 recent_data = low_open_data.tail(30)
                 recent_avg = recent_data['Low_Open_Pct'].mean()
-                recent_positive = (recent_data['High_Open_Pct'] > 0).sum()
+                recent_positive = (recent_data['Low_Open_Pct'] > 0).sum()
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Recent Average %", f"{recent_avg:.2f}%", 
