@@ -26,7 +26,7 @@ st.markdown("Earning in the face of Risk-STOCK MARKET")
 st.markdown("Tests: ADF, KPSS, PP, Jarque-Bera, L-jung Box")
 
 # Sidebar inputs
-st.sidebar.header("INPUT")
+st.sidebar.header("📈INPUT-ARIMA ORIGINAL")
 ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
 
 # Calendar date selection
@@ -1510,7 +1510,7 @@ st.title("📈 High-Open Percentage ARIMA Forecast")
 st.markdown("Model and forecast the `(High - Open) / Open * 100` percentage using ARIMA")
 
 # Sidebar inputs
-st.sidebar.header("Settings")
+st.sidebar.header(""📈INPUT-ARIMA PERCENTAGE"")
 ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 
 col1, col2 = st.sidebar.columns(2)
@@ -1710,8 +1710,8 @@ if run_forecast_btn:
         st.subheader("🔄 Model Fit: Actual vs Fitted")
         fig3, ax3 = plt.subplots(figsize=(12, 6))
 
-        # Plot last 60 days for clarity
-        plot_days = min(60, len(high_open_data))
+        # Plot last 100 days for clarity
+        plot_days = min(100, len(high_open_data))
         ax3.plot(high_open_data.index[-plot_days:],
                 high_open_data['High_Open_Pct'].iloc[-plot_days:],
                 label='Actual', linewidth=2, color='blue')
@@ -1754,8 +1754,8 @@ if run_forecast_btn:
         st.subheader("📈 Forecast Visualization")
         fig4, ax4 = plt.subplots(figsize=(12, 6))
 
-        # Plot historical data (last 30 days)
-        hist_days = min(30, len(high_open_data))
+        # Plot historical data (last 100 days)
+        hist_days = min(100, len(high_open_data))
         ax4.plot(high_open_data.index[-hist_days:],
                 high_open_data['High_Open_Pct'].iloc[-hist_days:],
                 label='Historical', linewidth=2, color='blue')
