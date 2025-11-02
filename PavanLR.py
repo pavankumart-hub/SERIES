@@ -243,7 +243,7 @@ if run_analysis_btn:
         # ACF and PACF plots for residuals
         st.subheader("ACF and PACF Plots for Residuals")
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-        plot_acf(residuals, ax=ax1, lags=20. color="green")
+        plot_acf(residuals, ax=ax1, lags=20, color="green")
         ax1.set_title("Autocorrelation Function (ACF)")
         plot_pacf(residuals, ax=ax2, lags=20,color="orange")
         ax2.set_title("Partial Autocorrelation Function (PACF)")
