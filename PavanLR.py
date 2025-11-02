@@ -757,13 +757,15 @@ if run_analysis_btn:
                 else:
                         st.warning("Residuals not normal (p ≤ 0.05)")
         
-        with col2:
+          with col2:
                 # Autocorrelation Test (Ljung-Box)
                 st.write("**Autocorrelation Test (Ljung-Box):**")
-                lb_stat, lb_p = acorr_ljungbox(residuals, lags=10, return_df=False)
-                st.write(f"Test Statistic: {lb_stat[-1]:.4f}")
-                st.write(f"P-value: {lb_p[-1]:.4f}")
-                if lb_p[-1] > 0.05:
+                lb_result = acorr_ljungbox(residuals, lags=10, return_df=True)
+                lb_stat = float(lb_result['lb_stat'].iloc[-1])
+                lb_p = float(lb_result['lb_pvalue'].iloc[-1])
+                st.write(f"Test Statistic: {lb_stat:.4f}")
+                st.write(f"P-value: {lb_p:.4f}")
+                if lb_p > 0.05:
                         st.success("No significant autocorrelation (p > 0.05)")
                 else:
                         st.warning("Significant autocorrelation present (p ≤ 0.05)")
