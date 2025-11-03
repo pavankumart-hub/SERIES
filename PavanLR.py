@@ -21,11 +21,6 @@ st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISS
 st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PAVAN KUMAR THOTA")
 st.markdown("Earning in the face of Risk-STOCK MARKET")
 st.markdown("Tests: ADF, KPSS, PP, Jarque-Bera, L-jung Box")
-# --- Motivational Quote ---
-st.markdown("---")
-st.markdown("### 💡 *Be patient — something big is going to happen!* 🚀")
-st.markdown("---")
-
 
 # Sidebar inputs
 st.sidebar.header("INPUT-ARIMA ORIGINAL")
@@ -644,57 +639,61 @@ if run_analysis_btn:
         y_pred_1d = np.asarray(y_pred).ravel()
         open_prices_1d = np.asarray(open_prices).ravel()
 
-        # Ensure same length
         if y_pred_1d.shape[0] != open_prices_1d.shape[0]:
             st.error(f"Length mismatch: y_pred ({y_pred_1d.shape[0]}) vs open_prices ({open_prices_1d.shape[0]})")
         else:
-            # --- Element-wise comparison (counts) ---
             pred_higher = int(np.sum(y_pred_1d > open_prices_1d))
             pred_equal  = int(np.sum(y_pred_1d == open_prices_1d))
             pred_lower  = int(np.sum(y_pred_1d < open_prices_1d))
 
             total = pred_higher + pred_equal + pred_lower
 
-            # --- Percentages ---
-            perc_higher = (pred_higher / total) * 100
-            perc_equal  = (pred_equal / total) * 100
-            perc_lower  = (pred_lower / total) * 100
+            if total == 0:
+                st.warning("No valid predictions to compare.")
+            else:
+                perc_higher = (pred_higher / total) * 100
+                perc_equal  = (pred_equal / total) * 100
+                perc_lower  = (pred_lower / total) * 100
 
-            # --- Create summary with three categories ---
-            comparison_data = {
-                'Category': ['Predicted > Open', 'Predicted = Open', 'Predicted < Open'],
-                'Count': [pred_higher, pred_equal, pred_lower],
-                'Percentage': [perc_higher, perc_equal, perc_lower]
-            }
+                comparison_data = {
+                    'Category': ['Predicted > Open', 'Predicted = Open', 'Predicted < Open'],
+                    'Count': [pred_higher, pred_equal, pred_lower],
+                    'Percentage': [perc_higher, perc_equal, perc_lower]
+                }
 
-            # --- Display counts ---
-            st.subheader("📈 Prediction Comparison")
-            st.write(f"**Predicted > Open:** {pred_higher} ({perc_higher:.2f}%)")
-            st.write(f"**Predicted = Open:** {pred_equal} ({perc_equal:.2f}%)")
-            st.write(f"**Predicted < Open:** {pred_lower} ({perc_lower:.2f}%)")
+                st.subheader("📈 Prediction Comparison")
+                st.write(f"**Predicted > Open:** {pred_higher} ({perc_higher:.2f}%)")
+                st.write(f"**Predicted = Open:** {pred_equal} ({perc_equal:.2f}%)")
+                st.write(f"**Predicted < Open:** {pred_lower} ({perc_lower:.2f}%)")
 
-            # --- Convert to DataFrame for plotting ---
-            comparison_df = pd.DataFrame(comparison_data)
+                comparison_df = pd.DataFrame(comparison_data)
 
-            # --- Plot bar chart with percentages on bars ---
-            fig, ax = plt.subplots()
-            bars = ax.bar(comparison_df['Category'], comparison_df['Count'], color=['#2ECC71', '#F1C40F', '#E74C3C'])
-            ax.set_title("Predicted vs Open Price Comparison")
-            ax.set_ylabel("Count")
-            ax.set_xlabel("Category")
-
-            # Add percentage labels on bars
-            for bar, pct in zip(bars, comparison_df['Percentage']):
-                height = bar.get_height()
-                ax.text(
-                    bar.get_x() + bar.get_width()/2,
-                    height,
-                    f"{pct:.2f}%",
-                    ha='center', va='bottom',
-                    fontsize=10, fontweight='bold'
+                fig, ax = plt.subplots()
+                bars = ax.bar(
+                    comparison_df['Category'], 
+                    comparison_df['Count'], 
+                    color=['#2ECC71', '#F1C40F', '#E74C3C']
                 )
+                ax.set_title("Predicted vs Open Price Comparison")
+                ax.set_ylabel("Count")
+                ax.set_xlabel("Category")
+                ax.set_ylim(0, max(comparison_df['Count']) * 1.2)
 
-            st.pyplot(fig)
+                for bar, pct in zip(bars, comparison_df['Percentage']):
+                    height = bar.get_height()
+                    ax.text(
+                        bar.get_x() + bar.get_width()/2, 
+                        height + 0.05 * max(comparison_df['Count']),
+                        f"{pct:.2f}%", 
+                        ha='center', 
+                        va='bottom', 
+                        fontsize=11, 
+                        fontweight='bold'
+                    )
+
+                st.pyplot(fig)
+                plt.close(fig)
+
 
 
             # --- Line Chart: Actual Open Prices vs Predicted Prices ---
