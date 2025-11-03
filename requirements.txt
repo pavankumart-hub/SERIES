@@ -6,7 +6,6 @@ matplotlib
 scikit-learn
 statsmodels
 scipy
-time
 
 
 
