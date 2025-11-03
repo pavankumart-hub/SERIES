@@ -62,15 +62,37 @@ run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 # After: run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 import time
 
+import streamlit as st
+import time
+
 # --- Motivational Quote ---
 st.markdown("---")
 st.markdown("### 💡 *Be patient — something big is going to happen!* 🚀")
 st.markdown("---")
 
-# --- Start Timer when analysis begins ---
+# --- Run Analysis Button ---
+run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
+
+# --- Timer logic ---
 if run_analysis_btn:
     st.session_state["start_time"] = time.time()
     st.success("🕒 Timer started — Analysis initiated...")
+
+# If timer is running (after button click)
+if "start_time" in st.session_state:
+    timer_placeholder = st.empty()
+
+    # Simulate analysis time or long process
+    for i in range(10):  # Example loop to simulate analysis
+        elapsed = time.time() - st.session_state["start_time"]
+        timer_placeholder.markdown(f"### ⏱ Elapsed Time: **{elapsed:.1f} seconds**")
+        time.sleep(1)
+        # (Here you would place your actual analysis steps instead of sleep)
+
+    # Once done
+    elapsed = time.time() - st.session_state["start_time"]
+    st.success(f"✅ Analysis completed in **{elapsed:.2f} seconds!**")
+    del st.session_state["start_time"]
 
 
 # Function to detect currency based on ticker
