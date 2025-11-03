@@ -764,11 +764,14 @@ if run_analysis_btn:
 # Make sure 'Open' is in your original X dataframe
         open_values = price_data1.values.reshape(-1, 1)
 
-        if open_values is not None and len(y_pred) == len(open_values):
+        # Flatten open_values to 1D array for comparison
+        open_values_flat = open_values.flatten()
+
+        if open_values_flat is not None and len(y_pred) == len(open_values_flat):
                 # Compare predictions with Open values
-                greater_than_open = np.sum(y_pred > open_values)
-                less_than_open = np.sum(y_pred < open_values)
-                equal_to_open = np.sum(y_pred == open_values)
+                greater_than_open = np.sum(y_pred > open_values_flat)
+                less_than_open = np.sum(y_pred < open_values_flat)
+                equal_to_open = np.sum(y_pred == open_values_flat)
                 
                 # Calculate percentages
                 total = len(y_pred)
@@ -828,7 +831,7 @@ if run_analysis_btn:
                 # Additional statistics
                 st.subheader("Additional Statistics")
                 
-                diff = y_pred - open_values
+                diff = y_pred - open_values_flat
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
@@ -846,10 +849,10 @@ if run_analysis_btn:
                 # Show some examples
                 st.subheader("Sample Comparisons")
                 sample_data = pd.DataFrame({
-                        'Actual_Open': open_values[:10],  # First 10 samples
+                        'Actual_Open': open_values_flat[:10],  # First 10 samples
                         'Predicted_Y': y_pred[:10],
                         'Difference': diff[:10],
-                        'Comparison': ['>' if p > o else '<' if p < o else '=' for p, o in zip(y_pred[:10], open_values[:10])]
+                        'Comparison': ['>' if p > o else '<' if p < o else '=' for p, o in zip(y_pred[:10], open_values_flat[:10])]
                 })
                 st.dataframe(sample_data.style.format({
                         'Actual_Open': '{:.4f}',
@@ -860,7 +863,7 @@ if run_analysis_btn:
         else:
                 st.error("Could not compare predictions with Open prices. Please ensure:")
                 st.write("- 'Open' column exists in your feature data")
-                st.write(f"- Length of predictions ({len(y_pred)}) matches length of Open values ({len(open_values) if open_values is not None else 'N/A'})")
+                st.write(f"- Length of predictions ({len(y_pred)}) matches length of Open values ({len(open_values_flat) if open_values_flat is not None else 'N/A'})")
         # Calculate residuals
         residuals = y.flatten() - y_pred.flatten()
         
