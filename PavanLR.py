@@ -14,6 +14,7 @@ from statsmodels.tsa.stattools import kpss, adfuller
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
+
 st.set_page_config(page_title="📈 PAVAN-HYBRID ARIMA Stock Forecast (stable)", layout="wide")
 st.title("Polynomial Regression + ARIMA Stock Forecast")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
