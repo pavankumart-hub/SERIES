@@ -648,32 +648,36 @@ if run_analysis_btn:
         if y_pred_1d.shape[0] != open_prices_1d.shape[0]:
             st.error(f"Length mismatch: y_pred ({y_pred_1d.shape[0]}) vs open_prices ({open_prices_1d.shape[0]})")
         else:
-            # Element-wise comparison (counts)
-            pred_higher = int(np.sum(y_pred_1d >= open_prices_1d))
-            pred_lower = int(np.sum(y_pred_1d < open_prices_1d))
+            # --- Element-wise comparison (counts) ---
+            pred_higher = int(np.sum(y_pred_1d > open_prices_1d))
+            pred_equal  = int(np.sum(y_pred_1d == open_prices_1d))
+            pred_lower  = int(np.sum(y_pred_1d < open_prices_1d))
 
-            # Create summary
+            # --- Create summary with three categories ---
             comparison_data = {
-                'Category': ['Predicted ≥ Open', 'Predicted < Open'],
-                'Count': [pred_higher, pred_lower]
+                'Category': ['Predicted > Open', 'Predicted = Open', 'Predicted < Open'],
+                'Count': [pred_higher, pred_equal, pred_lower]
             }
 
-            # Display counts
+            # --- Display counts ---
             st.subheader("📈 Prediction Comparison")
-            st.write(f"**Predicted ≥ Open:** {pred_higher}")
+            st.write(f"**Predicted > Open:** {pred_higher}")
+            st.write(f"**Predicted = Open:** {pred_equal}")
             st.write(f"**Predicted < Open:** {pred_lower}")
 
-            # Convert to DataFrame for plotting
+            # --- Convert to DataFrame for plotting ---
             comparison_df = pd.DataFrame(comparison_data)
 
             # --- Plot bar chart ---
             fig, ax = plt.subplots()
             ax.bar(comparison_df['Category'], comparison_df['Count'])
-            ax.set_title("Predicted vs. Open Price Comparison")
+            ax.set_title("Predicted vs Open Price Comparison")
             ax.set_ylabel("Count")
             ax.set_xlabel("Category")
 
             st.pyplot(fig)
+
+
 
         # --- Line Chart: Actual Open Prices vs Predicted Prices ---
         st.subheader("📈 Actual vs Predicted Prices")
