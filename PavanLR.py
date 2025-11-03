@@ -1946,4 +1946,4 @@ if run_forecast_btn:
 # Add some help text
 with st.sidebar:
     st.markdown("---")
-    st.markdown("""**One of the funny things about the stock market is that every time one person buys, another sells, and both think they are astute.**""")
+    st.markdown("""**"One of the funny things about the stock market is that every time one person buys, another sells, and both think they are astute"-William Feather**""")
