@@ -59,33 +59,6 @@ q_range = st.sidebar.slider("Q (MA) Range", 0, 5, (0, 2))
 d_range = st.sidebar.slider("D (Differencing) Range", 0, 2, (0, 1))
 run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 
-# After: run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
-import streamlit as st
-import time
-
-# --- Motivational Quote ---
-st.markdown("---")
-st.markdown("### 💡 *Be patient — something big is going to happen!* 🚀")
-st.markdown("---")
-
-# --- Run Analysis Button ---
-run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
-
-# --- Start Timer when button clicked ---
-if run_analysis_btn:
-    st.session_state["timer_start"] = time.time()
-    st.success("🕒 Timer started — Analysis initiated...")
-
-# --- Display live timer if started ---
-if "timer_start" in st.session_state:
-    timer_placeholder = st.empty()
-    while True:
-        elapsed = time.time() - st.session_state["timer_start"]
-        minutes, seconds = divmod(int(elapsed), 60)
-        timer_placeholder.markdown(f"### ⏱ Running Time: **{minutes:02d}:{seconds:02d}**")
-        time.sleep(1)
-
-
 # Function to detect currency based on ticker
 def detect_currency(ticker):
     # Indian stock indicators
