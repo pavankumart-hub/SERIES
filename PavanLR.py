@@ -756,114 +756,114 @@ if run_analysis_btn:
             plt.tight_layout()
             st.pyplot(fig)
 
-# Assuming you have your predictions and data
-# y_pred = model.predict(X_poly)
-# X contains your original features including 'Open'
+        # Assuming you have your predictions and data
+        # y_pred = model.predict(X_poly)
+        # X contains your original features including 'Open'
 
-# Get the 'Open' values from your original data
-# Make sure 'Open' is in your original X dataframe
-open_values = price_data1.values.reshape(-1, 1)
+        # Get the 'Open' values from your original data
+        # Make sure 'Open' is in your original X dataframe
+        open_values = price_data1.values.reshape(-1, 1)
 
-# Flatten open_values to 1D array for comparison
-open_values_flat = open_values.flatten()
+        # Flatten open_values to 1D array for comparison
+        open_values_flat = open_values.flatten()
 
-if open_values_flat is not None and len(y_pred) == len(open_values_flat):
-    # Compare predictions with Open values
-    greater_than_open = np.sum(y_pred > open_values_flat)
-    less_than_open = np.sum(y_pred < open_values_flat)
-    equal_to_open = np.sum(y_pred == open_values_flat)
-    
-    # Calculate percentages
-    total = len(y_pred)
-    greater_pct = (greater_than_open / total) * 100
-    less_pct = (less_than_open / total) * 100
-    equal_pct = (equal_to_open / total) * 100
-    
-    # Display results
-    st.subheader("📊 Prediction vs Open Price Comparison")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Predictions > Open", f"{greater_than_open}", f"{greater_pct:.1f}%")
-    
-    with col2:
-        st.metric("Predictions < Open", f"{less_than_open}", f"{less_pct:.1f}%")
-    
-    with col3:
-        st.metric("Predictions = Open", f"{equal_to_open}", f"{equal_pct:.1f}%")
-    
-    # Create bar chart
-    st.subheader("Comparison Distribution")
-    
-    categories = ['> Open', '< Open', '= Open']
-    counts = [greater_than_open, less_than_open, equal_to_open]
-    percentages = [greater_pct, less_pct, equal_pct]
-    
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    
-    # Bar plot with counts
-    bars1 = ax1.bar(categories, counts, color=['green', 'red', 'blue'], alpha=0.7)
-    ax1.set_title('Count of Predictions vs Open Price')
-    ax1.set_ylabel('Number of Predictions')
-    
-    # Add value labels on bars
-    for bar in bars1:
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height)}', ha='center', va='bottom')
-    
-    # Bar plot with percentages
-    bars2 = ax2.bar(categories, percentages, color=['green', 'red', 'blue'], alpha=0.7)
-    ax2.set_title('Percentage of Predictions vs Open Price')
-    ax2.set_ylabel('Percentage (%)')
-    ax2.set_ylim(0, 100)
-    
-    # Add percentage labels on bars
-    for bar in bars2:
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.1f}%', ha='center', va='bottom')
-    
-    plt.tight_layout()
-    st.pyplot(fig)
-    
-    # Additional statistics
-    st.subheader("Additional Statistics")
-    
-    diff = y_pred - open_values_flat
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Mean Difference", f"{np.mean(diff):.4f}")
-    
-    with col2:
-        st.metric("Std Dev of Difference", f"{np.std(diff):.4f}")
-    
-    with col3:
-        st.metric("Max Positive Difference", f"{np.max(diff):.4f}")
-    
-    with col4:
-        st.metric("Max Negative Difference", f"{np.min(diff):.4f}")
-    
-    # Show some examples
-    st.subheader("Sample Comparisons")
-    sample_data = pd.DataFrame({
-        'Actual_Open': open_values_flat[:10],  # First 10 samples
-        'Predicted_Y': y_pred[:10],
-        'Difference': diff[:10],
-        'Comparison': ['>' if p > o else '<' if p < o else '=' for p, o in zip(y_pred[:10], open_values_flat[:10])]
-    })
-    st.dataframe(sample_data.style.format({
-        'Actual_Open': '{:.4f}',
-        'Predicted_Y': '{:.4f}', 
-        'Difference': '{:.4f}'
-    }))
-    
-else:
-    st.error("Could not compare predictions with Open prices. Please ensure:")
-    st.write("- 'Open' column exists in your feature data")
-    st.write(f"- Length of predictions ({len(y_pred)}) matches length of Open values ({len(open_values_flat) if open_values_flat is not None else 'N/A'})"))
+        if open_values_flat is not None and len(y_pred) == len(open_values_flat):
+                # Compare predictions with Open values
+                greater_than_open = np.sum(y_pred > open_values_flat)
+                less_than_open = np.sum(y_pred < open_values_flat)
+                equal_to_open = np.sum(y_pred == open_values_flat)
+                
+                # Calculate percentages
+                total = len(y_pred)
+                greater_pct = (greater_than_open / total) * 100
+                less_pct = (less_than_open / total) * 100
+                equal_pct = (equal_to_open / total) * 100
+                
+                # Display results
+                st.subheader("📊 Prediction vs Open Price Comparison")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                        st.metric("Predictions > Open", f"{greater_than_open}", f"{greater_pct:.1f}%")
+                
+                with col2:
+                        st.metric("Predictions < Open", f"{less_than_open}", f"{less_pct:.1f}%")
+                
+                with col3:
+                        st.metric("Predictions = Open", f"{equal_to_open}", f"{equal_pct:.1f}%")
+                
+                # Create bar chart
+                st.subheader("Comparison Distribution")
+                
+                categories = ['> Open', '< Open', '= Open']
+                counts = [greater_than_open, less_than_open, equal_to_open]
+                percentages = [greater_pct, less_pct, equal_pct]
+                
+                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+                
+                # Bar plot with counts
+                bars1 = ax1.bar(categories, counts, color=['green', 'red', 'blue'], alpha=0.7)
+                ax1.set_title('Count of Predictions vs Open Price')
+                ax1.set_ylabel('Number of Predictions')
+                
+                # Add value labels on bars
+                for bar in bars1:
+                        height = bar.get_height()
+                        ax1.text(bar.get_x() + bar.get_width()/2., height,
+                                f'{int(height)}', ha='center', va='bottom')
+                
+                # Bar plot with percentages
+                bars2 = ax2.bar(categories, percentages, color=['green', 'red', 'blue'], alpha=0.7)
+                ax2.set_title('Percentage of Predictions vs Open Price')
+                ax2.set_ylabel('Percentage (%)')
+                ax2.set_ylim(0, 100)
+                
+                # Add percentage labels on bars
+                for bar in bars2:
+                        height = bar.get_height()
+                        ax2.text(bar.get_x() + bar.get_width()/2., height,
+                                f'{height:.1f}%', ha='center', va='bottom')
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Additional statistics
+                st.subheader("Additional Statistics")
+                
+                diff = y_pred - open_values_flat
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                        st.metric("Mean Difference", f"{np.mean(diff):.4f}")
+                
+                with col2:
+                        st.metric("Std Dev of Difference", f"{np.std(diff):.4f}")
+                
+                with col3:
+                        st.metric("Max Positive Difference", f"{np.max(diff):.4f}")
+                
+                with col4:
+                        st.metric("Max Negative Difference", f"{np.min(diff):.4f}")
+                
+                # Show some examples
+                st.subheader("Sample Comparisons")
+                sample_data = pd.DataFrame({
+                        'Actual_Open': open_values_flat[:10],  # First 10 samples
+                        'Predicted_Y': y_pred[:10],
+                        'Difference': diff[:10],
+                        'Comparison': ['>' if p > o else '<' if p < o else '=' for p, o in zip(y_pred[:10], open_values_flat[:10])]
+                })
+                st.dataframe(sample_data.style.format({
+                        'Actual_Open': '{:.4f}',
+                        'Predicted_Y': '{:.4f}', 
+                        'Difference': '{:.4f}'
+                }))
+                
+        else:
+                st.error("Could not compare predictions with Open prices. Please ensure:")
+                st.write("- 'Open' column exists in your feature data")
+                st.write(f"- Length of predictions ({len(y_pred)}) matches length of Open values ({len(open_values_flat) if open_values_flat is not None else 'N/A'})")
         # Calculate residuals
         residuals = y.flatten() - y_pred.flatten()
         
