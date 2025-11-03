@@ -6,6 +6,8 @@ matplotlib
 scikit-learn
 statsmodels
 scipy
+arch
+
 
 
 
