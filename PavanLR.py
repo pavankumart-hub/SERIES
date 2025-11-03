@@ -67,15 +67,11 @@ st.markdown("---")
 st.markdown("### 💡 *Be patient — something big is going to happen!* 🚀")
 st.markdown("---")
 
-# --- Standalone Timer (starts when analysis button is clicked) ---
+# --- Start Timer when analysis begins ---
 if run_analysis_btn:
     st.session_state["start_time"] = time.time()
-    st.success("🕒 Analysis started! Timer initiated...")
+    st.success("🕒 Timer started — Analysis initiated...")
 
-# Display elapsed time if timer started
-if "start_time" in st.session_state:
-    elapsed = time.time() - st.session_state["start_time"]
-    st.info(f"⏱️ Elapsed Time Since Analysis Start: **{elapsed:.2f} seconds**")
 
 # Function to detect currency based on ticker
 def detect_currency(ticker):
