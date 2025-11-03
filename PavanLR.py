@@ -986,6 +986,17 @@ if run_analysis_btn:
             st.write(f"**AIC:** {best_original_model_info['AIC']:.2f}")
             st.write(f"**BIC:** {best_original_model_info['BIC']:.2f}")
             #------
+                        # Best model
+            best_original_model_info = original_results_df.iloc[0]
+            best_original_arima_model = best_original_model_info['model']
+            fitted_original_values = best_original_model_info['fitted_values']
+            d = int(best_original_model_info['d'])  # number of differences
+            
+            st.subheader("Best ARIMA Model for Original Stock Data")
+            st.write(f"**ARIMA({best_original_model_info['p']},{best_original_model_info['d']},{best_original_model_info['q']})**")
+            st.write(f"**AIC:** {best_original_model_info['AIC']:.2f}")
+            st.write(f"**BIC:** {best_original_model_info['BIC']:.2f}")
+
             # --- Compare ARIMA fitted values with Open prices ---
             st.subheader("📊 ARIMA Fitted vs Open Price Comparison")
 
@@ -993,10 +1004,18 @@ if run_analysis_btn:
             fitted_values_1d = np.asarray(fitted_original_values).ravel()
             open_prices_1d = np.asarray(price_data1).ravel()
 
+            # Remove first 'd' points (based on differencing order)
+            if d > 0:
+                open_prices_1d = open_prices_1d[d:]
+                price_dates = price_data.index[d:]
+            else:
+                price_dates = price_data.index
+
             # Ensure same length
             min_len = min(len(fitted_values_1d), len(open_prices_1d))
             fitted_values_1d = fitted_values_1d[:min_len]
             open_prices_1d = open_prices_1d[:min_len]
+            price_dates = price_dates[:min_len]
 
             # Element-wise comparison
             pred_higher = int(np.sum(fitted_values_1d > open_prices_1d))
@@ -1026,14 +1045,15 @@ if run_analysis_btn:
             # --- Line Chart ---
             st.subheader("📈 ARIMA Fitted vs Open Price Over Time")
             fig2, ax2 = plt.subplots(figsize=(10, 5))
-            ax2.plot(price_data.index[:min_len], open_prices_1d, label="Actual Open", linewidth=2)
-            ax2.plot(price_data.index[:min_len], fitted_values_1d, label="ARIMA Fitted", linestyle='--', linewidth=2)
+            ax2.plot(price_dates, open_prices_1d, label="Actual Open", linewidth=2)
+            ax2.plot(price_dates, fitted_values_1d, label="ARIMA Fitted", linestyle='--', linewidth=2)
             ax2.set_xlabel("Date")
             ax2.set_ylabel("Price")
             ax2.legend()
             ax2.grid(True)
             st.pyplot(fig2)
 
+#--------
 
             # Plot Fitted vs Actual Original Data
             st.subheader("ARIMA: Fitted vs Actual Stock Prices")
