@@ -985,7 +985,56 @@ if run_analysis_btn:
             st.write(f"**ARIMA({best_original_model_info['p']},{best_original_model_info['d']},{best_original_model_info['q']})**")
             st.write(f"**AIC:** {best_original_model_info['AIC']:.2f}")
             st.write(f"**BIC:** {best_original_model_info['BIC']:.2f}")
-            
+            #------
+            # --- Compare ARIMA fitted values with Open prices ---
+            st.subheader("📊 ARIMA Fitted vs Open Price Comparison")
+
+            # Convert to 1D arrays
+            fitted_values_1d = np.asarray(fitted_original_values).ravel()
+            open_prices_1d = np.asarray(price_data1).ravel()
+
+            # Ensure same length
+            min_len = min(len(fitted_values_1d), len(open_prices_1d))
+            fitted_values_1d = fitted_values_1d[:min_len]
+            open_prices_1d = open_prices_1d[:min_len]
+
+            # Element-wise comparison
+            pred_higher = int(np.sum(fitted_values_1d > open_prices_1d))
+            pred_equal  = int(np.sum(fitted_values_1d == open_prices_1d))
+            pred_lower  = int(np.sum(fitted_values_1d < open_prices_1d))
+
+            # Create summary
+            comparison_data = {
+                'Category': ['Fitted > Open', 'Fitted = Open', 'Fitted < Open'],
+                'Count': [pred_higher, pred_equal, pred_lower]
+            }
+
+            # Display counts
+            st.write(f"**Fitted > Open:** {pred_higher}")
+            st.write(f"**Fitted = Open:** {pred_equal}")
+            st.write(f"**Fitted < Open:** {pred_lower}")
+
+            # --- Bar Chart ---
+            comparison_df = pd.DataFrame(comparison_data)
+            fig, ax = plt.subplots()
+            ax.bar(comparison_df['Category'], comparison_df['Count'], color=['green', 'orange', 'red'])
+            ax.set_title("ARIMA Fitted vs Open Price Comparison")
+            ax.set_ylabel("Count")
+            ax.set_xlabel("Category")
+            st.pyplot(fig)
+
+            # --- Line Chart ---
+            st.subheader("📈 ARIMA Fitted vs Open Price Over Time")
+            fig2, ax2 = plt.subplots(figsize=(10, 5))
+            ax2.plot(price_data.index[:min_len], open_prices_1d, label="Actual Open", linewidth=2)
+            ax2.plot(price_data.index[:min_len], fitted_values_1d, label="ARIMA Fitted", linestyle='--', linewidth=2)
+            ax2.set_xlabel("Date")
+            ax2.set_ylabel("Price")
+            ax2.legend()
+            ax2.grid(True)
+            st.pyplot(fig2)
+
+
             # Plot Fitted vs Actual Original Data
             st.subheader("ARIMA: Fitted vs Actual Stock Prices")
             fig, ax = plt.subplots(figsize=(12, 6))
@@ -1170,7 +1219,7 @@ if run_analysis_btn:
             # Plot histogram
             fig, ax = plt.subplots(figsize=(10, 6))
             n_bins_arima, bins_arima, patches_arima = ax.hist(arima_residuals_clean, bins=30, density=True, 
-                                                             alpha=0.7, color='lightgreen', edgecolor='black')
+                                                             alpha=0.7, color='red', edgecolor='black')
             
             # Add normal distribution curve for comparison
             from scipy.stats import norm
