@@ -637,32 +637,44 @@ if run_analysis_btn:
         model.fit(X_poly, y)
         y_pred = model.predict(X_poly)
         
-        # --- Compare predicted prices with open prices ---
-        pred_higher = np.sum(y_pred >= open_prices.flatten())
-        pred_lower = np.sum(y_pred < open_prices.flatten())
+               # Ensure 1-D arrays for elementwise comparison
+        y_pred_1d = np.asarray(y_pred).ravel()
+        open_prices_1d = np.asarray(open_prices).ravel()
 
-        # Create summary
-        comparison_data = {
-            'Category': ['Predicted ≥ Open', 'Predicted < Open'],
-            'Count': [int(pred_higher), int(pred_lower)]
-        }
+        # Debug shapes (optional)
+        st.write("Shapes — y_pred:", y_pred_1d.shape, "open_prices:", open_prices_1d.shape)
 
-        # Display counts
-        st.subheader("📈 Prediction Comparison")
-        st.write(f"**Predicted ≥ Open:** {pred_higher}")
-        st.write(f"**Predicted < Open:** {pred_lower}")
+        # Ensure same length
+        if y_pred_1d.shape[0] != open_prices_1d.shape[0]:
+            st.error(f"Length mismatch: y_pred ({y_pred_1d.shape[0]}) vs open_prices ({open_prices_1d.shape[0]})")
+        else:
+            # Element-wise comparison (counts)
+            pred_higher = int(np.sum(y_pred_1d >= open_prices_1d))
+            pred_lower = int(np.sum(y_pred_1d < open_prices_1d))
 
-        # Convert to DataFrame for plotting
-        comparison_df = pd.DataFrame(comparison_data)
+            # Create summary
+            comparison_data = {
+                'Category': ['Predicted ≥ Open', 'Predicted < Open'],
+                'Count': [pred_higher, pred_lower]
+            }
 
-        # --- Plot bar chart ---
-        fig, ax = plt.subplots()
-        ax.bar(comparison_df['Category'], comparison_df['Count'])
-        ax.set_title("Predicted vs. Open Price Comparison")
-        ax.set_ylabel("Count")
-        ax.set_xlabel("Category")
+            # Display counts
+            st.subheader("📈 Prediction Comparison")
+            st.write(f"**Predicted ≥ Open:** {pred_higher}")
+            st.write(f"**Predicted < Open:** {pred_lower}")
 
-        st.pyplot(fig)
+            # Convert to DataFrame for plotting
+            comparison_df = pd.DataFrame(comparison_data)
+
+            # --- Plot bar chart ---
+            fig, ax = plt.subplots()
+            ax.bar(comparison_df['Category'], comparison_df['Count'])
+            ax.set_title("Predicted vs. Open Price Comparison")
+            ax.set_ylabel("Count")
+            ax.set_xlabel("Category")
+
+            st.pyplot(fig)
+
 
 # Coefficients section
         st.header("📊 Model Coefficients Analysis")
