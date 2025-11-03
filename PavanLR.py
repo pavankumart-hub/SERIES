@@ -987,45 +987,43 @@ if run_analysis_btn:
             st.write(f"**BIC:** {best_original_model_info['BIC']:.2f}")
  
 #------------------------------------
-            # --- Compare ARIMA fitted values with Open prices ---
-            st.subheader("📊 ARIMA Fitted vs Open Price Comparison")
-
-            # Convert to 1D arrays
+            # --- Prepare fitted values and align with Open prices ---
             fitted_values_1d = np.asarray(fitted_original_values).ravel()
             open_prices_1d = np.asarray(price_data1).ravel()
+            price_dates = price_data.index
 
-            # Remove first 'd' points (based on differencing order)
-            if d > 0:
-                open_prices_1d = open_prices_1d[d:]
-                price_dates = price_data.index[d:]
-            else:
-                price_dates = price_data.index
+            # Always remove first two values
+            if len(fitted_values_1d) > 2 and len(open_prices_1d) > 2:
+                fitted_values_1d = fitted_values_1d[2:]
+                open_prices_1d = open_prices_1d[2:]
+                price_dates = price_dates[2:]
 
             # Ensure same length
-            min_len = min(len(fitted_values_1d), len(open_prices_1d))
+            min_len = min(len(fitted_values_1d), len(open_prices_1d), len(price_dates))
             fitted_values_1d = fitted_values_1d[:min_len]
             open_prices_1d = open_prices_1d[:min_len]
             price_dates = price_dates[:min_len]
 
-            # Element-wise comparison
+            # --- Element-wise comparison ---
             pred_higher = int(np.sum(fitted_values_1d > open_prices_1d))
             pred_equal  = int(np.sum(fitted_values_1d == open_prices_1d))
             pred_lower  = int(np.sum(fitted_values_1d < open_prices_1d))
 
-            # Compute percentages
+            # --- Compute percentages ---
             total = pred_higher + pred_equal + pred_lower
-            pct_higher = (pred_higher / total) * 100
-            pct_equal  = (pred_equal / total) * 100
-            pct_lower  = (pred_lower / total) * 100
+            pct_higher = (pred_higher / total) * 100 if total > 0 else 0
+            pct_equal  = (pred_equal / total) * 100 if total > 0 else 0
+            pct_lower  = (pred_lower / total) * 100 if total > 0 else 0
 
-            # Create summary
+            # --- Create summary ---
             comparison_data = {
                 'Category': ['Fitted > Open', 'Fitted = Open', 'Fitted < Open'],
                 'Count': [pred_higher, pred_equal, pred_lower],
                 'Percentage': [pct_higher, pct_equal, pct_lower]
             }
 
-            # Display counts and percentages
+            # --- Display counts and percentages ---
+            st.subheader("📊 ARIMA Fitted vs Open Price Comparison")
             st.write(f"**Fitted > Open:** {pred_higher} ({pct_higher:.2f}%)")
             st.write(f"**Fitted = Open:** {pred_equal} ({pct_equal:.2f}%)")
             st.write(f"**Fitted < Open:** {pred_lower} ({pct_lower:.2f}%)")
@@ -1038,11 +1036,10 @@ if run_analysis_btn:
             ax.set_ylabel("Count")
             ax.set_xlabel("Category")
 
-            # Add percentage labels above bars
             for i, bar in enumerate(bars):
                 height = bar.get_height()
                 ax.text(
-                    bar.get_x() + bar.get_width()/2, height,
+                    bar.get_x() + bar.get_width() / 2, height,
                     f"{comparison_df['Percentage'][i]:.2f}%",
                     ha='center', va='bottom', fontsize=10, fontweight='bold'
                 )
