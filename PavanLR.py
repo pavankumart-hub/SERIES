@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
 from statsmodels.tsa.stattools import kpss, adfuller
-from arch.unitroot import PhillipsPerron
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
