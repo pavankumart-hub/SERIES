@@ -59,6 +59,24 @@ q_range = st.sidebar.slider("Q (MA) Range", 0, 5, (0, 2))
 d_range = st.sidebar.slider("D (Differencing) Range", 0, 2, (0, 1))
 run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 
+# After: run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
+import time
+
+# --- Motivational Quote ---
+st.markdown("---")
+st.markdown("### 💡 *Be patient — something big is going to happen!* 🚀")
+st.markdown("---")
+
+# --- Standalone Timer (starts when analysis button is clicked) ---
+if run_analysis_btn:
+    st.session_state["start_time"] = time.time()
+    st.success("🕒 Analysis started! Timer initiated...")
+
+# Display elapsed time if timer started
+if "start_time" in st.session_state:
+    elapsed = time.time() - st.session_state["start_time"]
+    st.info(f"⏱️ Elapsed Time Since Analysis Start: **{elapsed:.2f} seconds**")
+
 # Function to detect currency based on ticker
 def detect_currency(ticker):
     # Indian stock indicators
