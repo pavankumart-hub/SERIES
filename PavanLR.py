@@ -123,21 +123,16 @@ def safe_adfuller(data):
         return adf_stat, adf_p, None
     except Exception as ex:
         return None, None, str(ex)
-        
-def safe_pp_test(data):
+
+def adf_test(data):
     try:
-        # Use arch package for Phillips-Perron test
-        pp_test = PhillipsPerron(data)
-        pp_stat = float(pp_test.stat)
-        pp_p = float(pp_test.pvalue)
-        return pp_stat, pp_p, None
+        adf_result = adfuller(data)
+        adf_stat = float(adf_result[0])
+        adf_p = float(adf_result[1])
+        return adf_stat, adf_p, None
     except Exception as ex:
-        # Fallback to ADF if PP fails
-        try:
-            adf_result = adfuller(data)
-            return adf_result[0], adf_result[1], f"PP failed, using ADF: {str(ex)}"
-        except Exception as ex2:
-            return None, None, f"Both PP and ADF failed: {str(ex2)}"
+        return None, None, f"ADF test failed: {str(ex)}"
+
         
 def fit_arima_model(data, p, d, q):
     try:
@@ -368,22 +363,7 @@ if run_analysis_btn:
                 st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
             else:
                 st.error("✗ Residuals are Non-Stationary (p-value > 0.05)")
-        # Phillips-Perron Test for Residuals
-        st.subheader("Phillips-Perron Test - Stationarity Check (Residuals)")
-        pp_stat, pp_p, pp_err = safe_pp_test(residuals)
 
-        if pp_err:
-            st.warning(f"Note: {pp_err}")
-            st.write(f"**Test Statistic:** {pp_stat:.6f}")
-            st.write(f"**p-value:** {pp_p:.6f}")
-        else:
-            st.write(f"**PP Test Statistic:** {pp_stat:.6f}")
-            st.write(f"**PP p-value:** {pp_p:.6f}")
-
-        if pp_p <= 0.05:
-            st.success("✓ Residuals are Stationary (p-value ≤ 0.05)")
-        else:
-            st.error("✗ Residuals are Unit Root-Non-Stationary (p-value > 0.05)")
         # Residual Histogram with Skewness and Kurtosis
         st.subheader("Residual Distribution Analysis")
         
