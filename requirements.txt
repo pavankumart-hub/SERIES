@@ -7,7 +7,7 @@ scikit-learn
 statsmodels
 scipy
 plotly
-arch
+
 
 
 
