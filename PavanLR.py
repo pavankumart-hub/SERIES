@@ -985,18 +985,8 @@ if run_analysis_btn:
             st.write(f"**ARIMA({best_original_model_info['p']},{best_original_model_info['d']},{best_original_model_info['q']})**")
             st.write(f"**AIC:** {best_original_model_info['AIC']:.2f}")
             st.write(f"**BIC:** {best_original_model_info['BIC']:.2f}")
-            #------
-                        # Best model
-            best_original_model_info = original_results_df.iloc[0]
-            best_original_arima_model = best_original_model_info['model']
-            fitted_original_values = best_original_model_info['fitted_values']
-            d = int(best_original_model_info['d'])  # number of differences
-            
-            st.subheader("Best ARIMA Model for Original Stock Data")
-            st.write(f"**ARIMA({best_original_model_info['p']},{best_original_model_info['d']},{best_original_model_info['q']})**")
-            st.write(f"**AIC:** {best_original_model_info['AIC']:.2f}")
-            st.write(f"**BIC:** {best_original_model_info['BIC']:.2f}")
-
+ 
+#------------------------------------
             # --- Compare ARIMA fitted values with Open prices ---
             st.subheader("📊 ARIMA Fitted vs Open Price Comparison")
 
@@ -1022,24 +1012,41 @@ if run_analysis_btn:
             pred_equal  = int(np.sum(fitted_values_1d == open_prices_1d))
             pred_lower  = int(np.sum(fitted_values_1d < open_prices_1d))
 
+            # Compute percentages
+            total = pred_higher + pred_equal + pred_lower
+            pct_higher = (pred_higher / total) * 100
+            pct_equal  = (pred_equal / total) * 100
+            pct_lower  = (pred_lower / total) * 100
+
             # Create summary
             comparison_data = {
                 'Category': ['Fitted > Open', 'Fitted = Open', 'Fitted < Open'],
-                'Count': [pred_higher, pred_equal, pred_lower]
+                'Count': [pred_higher, pred_equal, pred_lower],
+                'Percentage': [pct_higher, pct_equal, pct_lower]
             }
 
-            # Display counts
-            st.write(f"**Fitted > Open:** {pred_higher}")
-            st.write(f"**Fitted = Open:** {pred_equal}")
-            st.write(f"**Fitted < Open:** {pred_lower}")
+            # Display counts and percentages
+            st.write(f"**Fitted > Open:** {pred_higher} ({pct_higher:.2f}%)")
+            st.write(f"**Fitted = Open:** {pred_equal} ({pct_equal:.2f}%)")
+            st.write(f"**Fitted < Open:** {pred_lower} ({pct_lower:.2f}%)")
 
-            # --- Bar Chart ---
+            # --- Bar Chart with % Labels ---
             comparison_df = pd.DataFrame(comparison_data)
             fig, ax = plt.subplots()
-            ax.bar(comparison_df['Category'], comparison_df['Count'], color=['green', 'orange', 'red'])
+            bars = ax.bar(comparison_df['Category'], comparison_df['Count'], color=['green', 'orange', 'red'])
             ax.set_title("ARIMA Fitted vs Open Price Comparison")
             ax.set_ylabel("Count")
             ax.set_xlabel("Category")
+
+            # Add percentage labels above bars
+            for i, bar in enumerate(bars):
+                height = bar.get_height()
+                ax.text(
+                    bar.get_x() + bar.get_width()/2, height,
+                    f"{comparison_df['Percentage'][i]:.2f}%",
+                    ha='center', va='bottom', fontsize=10, fontweight='bold'
+                )
+
             st.pyplot(fig)
 
             # --- Line Chart ---
