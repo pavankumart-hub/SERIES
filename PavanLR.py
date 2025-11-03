@@ -675,6 +675,28 @@ if run_analysis_btn:
 
             st.pyplot(fig)
 
+        # --- Line Chart: Actual Open Prices vs Predicted Prices ---
+        st.subheader("📈 Actual vs Predicted Prices")
+
+        # Flatten both arrays to 1D
+        y_pred_1d = np.asarray(y_pred).ravel()
+        open_prices_1d = np.asarray(open_prices).ravel()
+
+        # Create a date index for plotting
+        dates_list = price_data.index
+
+        # Plot line chart
+        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        ax2.plot(dates_list, open_prices_1d, label='Actual Open Price', linewidth=2)
+        ax2.plot(dates_list, y_pred_1d, label='Predicted Price', linestyle='--', linewidth=2)
+
+        ax2.set_title("Actual vs Predicted Prices Over Time")
+        ax2.set_xlabel("Date")
+        ax2.set_ylabel("Price")
+        ax2.legend()
+        ax2.grid(True)
+
+        st.pyplot(fig2)
 
 # Coefficients section
         st.header("📊 Model Coefficients Analysis")
