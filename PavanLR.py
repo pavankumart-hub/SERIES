@@ -659,6 +659,102 @@ if run_analysis_btn:
         model.fit(X_poly, y)
         y_pred = model.predict(X_poly)
 
+# Coefficients section
+        st.header("📊 Model Coefficients Analysis")
+
+# Get coefficients - ensure they are 1-dimensional
+        coefficients = model.coef_
+        intercept = model.intercept_
+
+        # Ensure coefficients is 1D array
+        coefficients = np.ravel(coefficients)  # This flattens any multi-dimensional array
+        
+        # Ensure intercept is a scalar value
+        if hasattr(intercept, '__len__'):
+            intercept = intercept[0] if len(intercept) > 0 else 0.0
+        else:
+            intercept = float(intercept)
+
+# Create two columns
+        col1, col2 = st.columns(2)
+
+        with col1:
+                st.metric("Intercept", f"{intercept:.4f}")
+
+        with col2:
+                st.metric("Number of Features", len(coefficients))
+
+# Coefficients table
+        st.subheader("Feature Coefficients")
+
+        # Get proper feature names for polynomial features
+        try:
+            # If using PolynomialFeatures, get the feature names
+            feature_names = poly.get_feature_names_out()
+            # Ensure feature_names has the same length as coefficients
+            if len(feature_names) != len(coefficients):
+                feature_names = feature_names[:len(coefficients)]
+        except:
+            # Fallback to default names
+            if hasattr(X_poly, 'columns') and len(X_poly.columns) == len(coefficients):
+                feature_names = X_poly.columns.tolist()
+            else:
+                feature_names = [f'Feature_{i+1}' for i in range(len(coefficients))]
+
+        # Debug information (you can remove this later)
+        st.write(f"Number of features: {len(feature_names)}")
+        st.write(f"Number of coefficients: {len(coefficients)}")
+
+        # Create DataFrame with proper dimensions
+        coef_df = pd.DataFrame({
+                'Feature': feature_names,
+                'Coefficient': coefficients,
+                'Abs_Coefficient': np.abs(coefficients)
+        }).sort_values('Abs_Coefficient', ascending=False)
+
+        st.dataframe(coef_df.style.format({'Coefficient': '{:.6f}', 'Abs_Coefficient': '{:.6f}'}),
+                         use_container_width=True)
+
+# Coefficient visualization
+        st.subheader("Coefficient Magnitude Visualization")
+
+        # Only create visualization if we have reasonable number of features
+        if len(coef_df) <= 20:  # Limit for better visualization
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+            # Bar plot of coefficients
+            colors = ['red' if x < 0 else 'blue' for x in coef_df['Coefficient']]
+            ax1.barh(coef_df['Feature'], coef_df['Coefficient'], color=colors)
+            ax1.set_xlabel('Coefficient Value')
+            ax1.set_title('Feature Coefficients')
+            ax1.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+
+            # Absolute value bar plot
+            ax2.barh(coef_df['Feature'], coef_df['Abs_Coefficient'], color='green', alpha=0.7)
+            ax2.set_xlabel('Absolute Coefficient Value')
+            ax2.set_title('Feature Importance (Absolute Values)')
+
+            plt.tight_layout()
+            st.pyplot(fig)
+        else:
+            st.warning(f"Too many features ({len(coef_df)}) to display visualization clearly. Showing top 10 features only.")
+            
+            # Show top 10 features
+            top_10_df = coef_df.head(10)
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+            colors = ['red' if x < 0 else 'blue' for x in top_10_df['Coefficient']]
+            ax1.barh(top_10_df['Feature'], top_10_df['Coefficient'], color=colors)
+            ax1.set_xlabel('Coefficient Value')
+            ax1.set_title('Top 10 Feature Coefficients')
+            ax1.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+
+            ax2.barh(top_10_df['Feature'], top_10_df['Abs_Coefficient'], color='green', alpha=0.7)
+            ax2.set_xlabel('Absolute Coefficient Value')
+            ax2.set_title('Top 10 Feature Importance')
+
+            plt.tight_layout()
+            st.pyplot(fig)
 
         # Calculate residuals
         residuals = y.flatten() - y_pred.flatten()
