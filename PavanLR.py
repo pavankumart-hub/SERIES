@@ -61,10 +61,6 @@ run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 
 # After: run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 import time
-
-import streamlit as st
-import time
-
 # --- Motivational Quote ---
 st.markdown("---")
 st.markdown("### 💡 *Be patient — something big is going to happen!* 🚀")
