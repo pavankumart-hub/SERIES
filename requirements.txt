@@ -6,8 +6,8 @@ scikit-learn
 matplotlib
 statsmodels
 scipy
-seaborn
 plotly
+
 
 
 
