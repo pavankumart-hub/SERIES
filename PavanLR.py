@@ -755,6 +755,7 @@ if run_analysis_btn:
 
             plt.tight_layout()
             st.pyplot(fig)
+
         # Calculate residuals
         residuals = y.flatten() - y_pred.flatten()
         
