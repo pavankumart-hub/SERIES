@@ -669,6 +669,7 @@ if run_analysis_btn:
     st.pyplot(fig)
 
 
+
 # Coefficients section
         st.header("📊 Model Coefficients Analysis")
 
