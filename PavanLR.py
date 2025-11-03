@@ -662,9 +662,15 @@ if run_analysis_btn:
 # Coefficients section
         st.header("📊 Model Coefficients Analysis")
 
-# Get coefficients
+# Get coefficients - ensure intercept is a scalar
         coefficients = model.coef_
         intercept = model.intercept_
+
+        # Ensure intercept is a scalar value
+        if hasattr(intercept, '__len__'):
+            intercept = intercept[0] if len(intercept) > 0 else 0.0
+        else:
+            intercept = float(intercept)
 
 # Create two columns
         col1, col2 = st.columns(2)
@@ -678,9 +684,15 @@ if run_analysis_btn:
 # Coefficients table
         st.subheader("Feature Coefficients")
 
-        if hasattr(X_poly, 'columns'):
+        # Get proper feature names for polynomial features
+        try:
+            # If using PolynomialFeatures, get the feature names
+            feature_names = poly.get_feature_names_out()
+        except:
+            # Fallback to default names
+            if hasattr(X_poly, 'columns'):
                 feature_names = X_poly.columns.tolist()
-        else:
+            else:
                 feature_names = [f'Feature_{i+1}' for i in range(len(coefficients))]
 
         coef_df = pd.DataFrame({
