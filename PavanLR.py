@@ -8,12 +8,24 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
 from statsmodels.tsa.stattools import kpss, adfuller
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
+# --- Get Indian Standard Time (IST) ---
+def get_ist_time():
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
+
+# --- Display current IST at top-right ---
+current_ist = get_ist_time()
+st.markdown(
+    f"<div style='text-align:right; font-size:18px; color:#2E86C1;'>🕒 IST: {current_ist}</div>",
+    unsafe_allow_html=True
+)
 
 warnings.filterwarnings("ignore")
 
