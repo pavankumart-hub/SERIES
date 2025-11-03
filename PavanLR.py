@@ -8,7 +8,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from datetime import datetime, timedelta, timezone
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
 from statsmodels.tsa.stattools import kpss, adfuller
@@ -634,91 +633,6 @@ if run_analysis_btn:
         model = LinearRegression()
         model.fit(X_poly, y)
         y_pred = model.predict(X_poly)
-        
-         # Ensure 1-D arrays for elementwise comparison
-        y_pred_1d = np.asarray(y_pred).ravel()
-        open_prices_1d = np.asarray(open_prices).ravel()
-
-        if y_pred_1d.shape[0] != open_prices_1d.shape[0]:
-            st.error(f"Length mismatch: y_pred ({y_pred_1d.shape[0]}) vs open_prices ({open_prices_1d.shape[0]})")
-        else:
-            pred_higher = int(np.sum(y_pred_1d > open_prices_1d))
-            pred_equal  = int(np.sum(y_pred_1d == open_prices_1d))
-            pred_lower  = int(np.sum(y_pred_1d < open_prices_1d))
-
-            total = pred_higher + pred_equal + pred_lower
-
-            if total == 0:
-                st.warning("No valid predictions to compare.")
-            else:
-                perc_higher = (pred_higher / total) * 100
-                perc_equal  = (pred_equal / total) * 100
-                perc_lower  = (pred_lower / total) * 100
-
-                comparison_data = {
-                    'Category': ['Predicted > Open', 'Predicted = Open', 'Predicted < Open'],
-                    'Count': [pred_higher, pred_equal, pred_lower],
-                    'Percentage': [perc_higher, perc_equal, perc_lower]
-                }
-
-                st.subheader("📈 Prediction Comparison")
-                st.write(f"**Predicted > Open:** {pred_higher} ({perc_higher:.2f}%)")
-                st.write(f"**Predicted = Open:** {pred_equal} ({perc_equal:.2f}%)")
-                st.write(f"**Predicted < Open:** {pred_lower} ({perc_lower:.2f}%)")
-
-                comparison_df = pd.DataFrame(comparison_data)
-
-                fig, ax = plt.subplots()
-                bars = ax.bar(
-                    comparison_df['Category'], 
-                    comparison_df['Count'], 
-                    color=['#2ECC71', '#F1C40F', '#E74C3C']
-                )
-                ax.set_title("Predicted vs Open Price Comparison")
-                ax.set_ylabel("Count")
-                ax.set_xlabel("Category")
-                ax.set_ylim(0, max(comparison_df['Count']) * 1.2)
-
-                for bar, pct in zip(bars, comparison_df['Percentage']):
-                    height = bar.get_height()
-                    ax.text(
-                        bar.get_x() + bar.get_width()/2, 
-                        height + 0.05 * max(comparison_df['Count']),
-                        f"{pct:.2f}%", 
-                        ha='center', 
-                        va='bottom', 
-                        fontsize=11, 
-                        fontweight='bold'
-                    )
-
-                st.pyplot(fig)
-                plt.close(fig)
-
-
-
-            # --- Line Chart: Actual Open Prices vs Predicted Prices ---
-            st.subheader("📈 Actual vs Predicted Prices")
-
-            # Flatten both arrays to 1D
-            y_pred_1d = np.asarray(y_pred).ravel()
-            open_prices_1d = np.asarray(open_prices).ravel()
-
-            # Create a date index for plotting
-            dates_list = price_data.index
-
-            # Plot line chart
-            fig2, ax2 = plt.subplots(figsize=(10, 5))
-            ax2.plot(dates_list, open_prices_1d, label='Actual Open Price', linewidth=2)
-            ax2.plot(dates_list, y_pred_1d, label='Predicted Price', linestyle='--', linewidth=2)
-
-            ax2.set_title("Actual vs Predicted Prices Over Time")
-            ax2.set_xlabel("Date")
-            ax2.set_ylabel("Price")
-            ax2.legend()
-            ax2.grid(True)
-
-            st.pyplot(fig2)
-
 
         # --- Line Chart: Actual Open Prices vs Predicted Prices ---
         st.subheader("📈 Actual vs Predicted Prices")
