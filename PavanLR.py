@@ -8,7 +8,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from datetime import datetime, timedelta, timezone
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from scipy.stats import jarque_bera, skew, kurtosis
 from statsmodels.tsa.stattools import kpss, adfuller
