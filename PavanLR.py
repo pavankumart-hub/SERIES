@@ -15,18 +15,6 @@ from statsmodels.tsa.stattools import kpss, adfuller
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
-# --- Get Indian Standard Time (IST) ---
-def get_ist_time():
-    ist = timezone(timedelta(hours=5, minutes=30))
-    return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
-
-# --- Display current IST at top-right ---
-current_ist = get_ist_time()
-st.markdown(
-    f"<div style='text-align:right; font-size:18px; color:#2E86C1;'>🕒 IST: {current_ist}</div>",
-    unsafe_allow_html=True
-)
-
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="📈 PAVAN-HYBRID ARIMA Stock Forecast (stable)", layout="wide")
