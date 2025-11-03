@@ -658,7 +658,59 @@ if run_analysis_btn:
         model = LinearRegression()
         model.fit(X_poly, y)
         y_pred = model.predict(X_poly)
-        
+
+# Coefficients section
+        st.header("📊 Model Coefficients Analysis")
+
+# Get coefficients
+        coefficients = model.coef_
+        intercept = model.intercept_
+
+# Create two columns
+        col1, col2 = st.columns(2)
+
+        with col1:
+                st.metric("Intercept", f"{intercept:.4f}")
+
+        with col2:
+                st.metric("Number of Features", len(coefficients))
+
+# Coefficients table
+        st.subheader("Feature Coefficients")
+
+        if hasattr(X_poly, 'columns'):
+                feature_names = X_poly.columns.tolist()
+        else:
+                feature_names = [f'Feature_{i+1}' for i in range(len(coefficients))]
+
+        coef_df = pd.DataFrame({
+                'Feature': feature_names,
+                'Coefficient': coefficients,
+                'Abs_Coefficient': np.abs(coefficients)
+        }).sort_values('Abs_Coefficient', ascending=False)
+
+        st.dataframe(coef_df.style.format({'Coefficient': '{:.6f}', 'Abs_Coefficient': '{:.6f}'}),
+                         use_container_width=True)
+
+# Coefficient visualization
+        st.subheader("Coefficient Magnitude Visualization")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+# Bar plot of coefficients
+        colors = ['red' if x < 0 else 'blue' for x in coef_df['Coefficient']]
+        ax1.barh(coef_df['Feature'], coef_df['Coefficient'], color=colors)
+        ax1.set_xlabel('Coefficient Value')
+        ax1.set_title('Feature Coefficients')
+        ax1.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+
+# Absolute value bar plot
+        ax2.barh(coef_df['Feature'], coef_df['Abs_Coefficient'], color='green', alpha=0.7)
+        ax2.set_xlabel('Absolute Coefficient Value')
+        ax2.set_title('Feature Importance (Absolute Values)')
+
+        plt.tight_layout()
+        st.pyplot(fig)
         # Calculate residuals
         residuals = y.flatten() - y_pred.flatten()
         
