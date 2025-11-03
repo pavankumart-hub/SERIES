@@ -606,8 +606,7 @@ if run_analysis_btn:
             plt.tight_layout()
             st.pyplot(fig)
             
-#Polynomial Regression with Multiple Features
-
+        #Polynomial Regression with Multiple Features
         st.header("📊 Polynomial Regression with Multiple Features") 
              
         # Prepare features (dates as ordinal)
@@ -637,38 +636,33 @@ if run_analysis_btn:
         model = LinearRegression()
         model.fit(X_poly, y)
         y_pred = model.predict(X_poly)
-    
-    # --- Compare predicted prices with open prices ---
-    pred_higher = np.sum(y_pred >= open_prices.flatten())
-    pred_lower = np.sum(y_pred < open_prices.flatten())
+        
+        # --- Compare predicted prices with open prices ---
+        pred_higher = np.sum(y_pred >= open_prices.flatten())
+        pred_lower = np.sum(y_pred < open_prices.flatten())
 
-    # Create summary
-    comparison_data = {
-        'Category': ['Predicted ≥ Open', 'Predicted < Open'],
-        'Count': [int(pred_higher), int(pred_lower)]
-    }
+        # Create summary
+        comparison_data = {
+            'Category': ['Predicted ≥ Open', 'Predicted < Open'],
+            'Count': [int(pred_higher), int(pred_lower)]
+        }
 
-    # Display counts
-    st.subheader("📈 Prediction Comparison")
-    st.write(f"**Predicted ≥ Open:** {pred_higher}")
-    st.write(f"**Predicted < Open:** {pred_lower}")
+        # Display counts
+        st.subheader("📈 Prediction Comparison")
+        st.write(f"**Predicted ≥ Open:** {pred_higher}")
+        st.write(f"**Predicted < Open:** {pred_lower}")
 
-    # Convert to DataFrame for plotting
-    import pandas as pd
-    comparison_df = pd.DataFrame(comparison_data)
+        # Convert to DataFrame for plotting
+        comparison_df = pd.DataFrame(comparison_data)
 
-    # --- Plot bar chart ---
-    import matplotlib.pyplot as plt
+        # --- Plot bar chart ---
+        fig, ax = plt.subplots()
+        ax.bar(comparison_df['Category'], comparison_df['Count'])
+        ax.set_title("Predicted vs. Open Price Comparison")
+        ax.set_ylabel("Count")
+        ax.set_xlabel("Category")
 
-    fig, ax = plt.subplots()
-    ax.bar(comparison_df['Category'], comparison_df['Count'])
-    ax.set_title("Predicted vs. Open Price Comparison")
-    ax.set_ylabel("Count")
-    ax.set_xlabel("Category")
-
-    st.pyplot(fig)
-
-
+        st.pyplot(fig)
 
 # Coefficients section
         st.header("📊 Model Coefficients Analysis")
