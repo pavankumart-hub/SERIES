@@ -31,18 +31,18 @@ ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
 col1, col2 = st.sidebar.columns(2)
 with col1:
     start_date = st.date_input("Start Date",
-                              value=datetime(2008, 1, 1).date(),
-                              min_value=datetime(2000, 1, 1).date(),
+                              value=datetime(2010, 1, 1).date(),
+                              min_value=datetime(2010, 1, 1).date(),
                               max_value=datetime.now().date())
 with col2:
     end_date = st.date_input("End Date",
                             value=datetime.now().date(),
-                            min_value=datetime(2000, 1, 1).date(),
+                            min_value=datetime(2010, 1, 1).date(),
                             max_value=datetime.now().date())
 
 # Price type selection
 price_type = st.sidebar.selectbox("Select Dependent Price Type (Y)", ["High", "Low", "Open", "Close", "Adj Close"])
-price_type1 = st.sidebar.selectbox("Select Independent Price Type (X)", ["High", "Low", "Open", "Close", "Adj Close"])
+price_type1 = st.sidebar.selectbox("Select Independent Price Type (X)", [ "Open"])
 st.sidebar.header("Forecast Input")
 today_open_input = st.sidebar.number_input(f"Enter Today's Open Price",
                                        value=100.0,
