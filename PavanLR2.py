@@ -49,12 +49,12 @@ today_open_input = st.sidebar.number_input(f"Enter Today's Open Price",
                                        min_value=0.0,
                                        step=0.1,
                                        key="today_open_input")
-degree = st.sidebar.slider("Polynomial Degree", 1, 20, 3)
+degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 
 # ARIMA parameters
 st.sidebar.header("ARIMA Parameters")
-p_range = st.sidebar.slider("P (AR) Range", 0, 5, (0, 2))
-q_range = st.sidebar.slider("Q (MA) Range", 0, 5, (0, 2))
+p_range = st.sidebar.slider("P (AR) Range", 0, 3, (0, 2))
+q_range = st.sidebar.slider("Q (MA) Range", 0, 3, (0, 2))
 d_range = st.sidebar.slider("D (Differencing) Range", 0, 2, (0, 1))
 run_analysis_btn = st.sidebar.button("Run Complete Analysis", type="primary")
 
@@ -383,7 +383,7 @@ if run_analysis_btn:
 
         # Plot histogram
         fig, ax = plt.subplots(figsize=(10, 6))
-        n_bins, bins, patches = ax.hist(residuals, bins=30, density=True, alpha=0.7, color='red', edgecolor='black')
+        n_bins, bins, patches = ax.hist(residuals, bins=75, density=True, alpha=0.7, color='red', edgecolor='black')
 
         # Add normal distribution curve for comparison
         from scipy.stats import norm
@@ -525,8 +525,8 @@ if run_analysis_btn:
             # ARIMA Forecast for next 5 days
             st.subheader("ARIMA Forecast for Next 5 Days (Residuals)")
 
-            # Forecast next 5 days
-            forecast_steps = 5
+            # Forecast next 2 days
+            forecast_steps = 2
             arima_forecast = best_arima_model.get_forecast(steps=forecast_steps)
             residual_forecast = arima_forecast.predicted_mean
             residual_ci = arima_forecast.conf_int()
@@ -546,7 +546,7 @@ if run_analysis_btn:
             future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
 
             # PRINT THE 5 FORECASTED VALUES CLEARLY
-            st.subheader("🎯 5 Forecasted Residual Values")
+            st.subheader("🎯 2 Forecasted Residual Values")
 
             # Method 1: Simple list - FIXED: Extract scalar values
             st.write("**Forecasted Values:**")
@@ -598,7 +598,7 @@ if run_analysis_btn:
             ax.axhline(0, linestyle='-', color='k', alpha=0.3)
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Residual Value ({currency_symbol})')
-            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): 5-Day Residual Forecast')
+            ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): 2-Day Residual Forecast')
             ax.legend()
             ax.grid(True, alpha=0.3)
             plt.xticks(rotation=45)
@@ -937,15 +937,15 @@ if run_analysis_btn:
 
         st.subheader("ARIMA Model Selection for Original Data")
         st.write(f"**ARIMA Parameters Range:**")
-        st.write(f"- P (AR): 0 to 5")
+        st.write(f"- P (AR): 0 to 3")
         st.write(f"- D (Differencing): 0 to 2")
-        st.write(f"- Q (MA): 0 to 5")
+        st.write(f"- Q (MA): 0 to 3")
 
         original_results = []
         with st.spinner("Fitting ARIMA models to original stock data..."):
-            for p in range(0, 6):  # 0 to 5
+            for p in range(0, 4):  # 0 to 5
                 for d in range(0, 3):  # 0 to 2
-                    for q in range(0, 6):  # 0 to 5
+                    for q in range(0, 4):  # 0 to 5
                         try:
                             model_arima, error = fit_arima_model(price_data.values, p, d, q)
                             if model_arima is not None:
@@ -1088,10 +1088,10 @@ if run_analysis_btn:
             st.pyplot(fig)
 
             # ARIMA Forecast for next 5 days on Original Data
-            st.subheader("ARIMA Forecast for Next 5 Days (Stock Prices)")
+            st.subheader("ARIMA Forecast for Next 2 Days (Stock Prices)")
 
-            # Forecast next 5 days
-            forecast_steps = 5
+            # Forecast next 2 days
+            forecast_steps = 2
             arima_forecast_original = best_original_arima_model.get_forecast(steps=forecast_steps)
             price_forecast = arima_forecast_original.predicted_mean
             price_ci = arima_forecast_original.conf_int()
