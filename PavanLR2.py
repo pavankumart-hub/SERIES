@@ -1982,7 +1982,7 @@ if run_forecast_btn:
                         color='blue', alpha=0.3, label='95% Confidence Interval')
 
         ax4.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-        ax4.axhline(y=avg_pct, color='green', linestyle='--', alpha=0.5,
+        ax4.axhline(y=avg_pct, color='orange', linestyle='--', alpha=0.5,
                    label=f'Historical Avg: {avg_pct:.2f}%')
 
         ax4.set_xlabel('Date')
@@ -2105,7 +2105,7 @@ if run_forecast_btn:
         # Time series plot of residuals
         residual_dates = low_open_data.index[len(low_open_data) - len(residuals_clean):]
         ax1.plot(residual_dates, residuals_clean, label='Residuals', color='red')
-        ax1.axhline(0, color='red', linestyle='--', alpha=0.7)
+        ax1.axhline(0, color='green', linestyle='--', alpha=0.7)
         ax1.set_title('Model Residuals Over Time')
         ax1.legend()
         ax1.grid(alpha=0.3)
