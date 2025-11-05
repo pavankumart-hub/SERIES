@@ -17,7 +17,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="📈 PAVAN-HYBRID ARIMA Stock Forecast (stable)", layout="wide")
-st.title("Polynomial Regression + ARIMA Stock Forecast")
+st.title("Polynomial Regression + ARIMA Stock Forecast-PAVAN")
+st.markdown("Wait a moment, something extraordinary is about to unfold.")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
 st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PAVAN KUMAR THOTA")
 st.markdown("Earning in the face of Risk-STOCK MARKET")
@@ -1717,8 +1718,8 @@ if run_analysis_btn:
             else:
                 st.warning("Low and Open price data not available for analysis")
 #Second Analysis
-st.set_page_config(page_title="High-Open ARIMA Forecast", layout="wide")
-st.title("📈 High-Open Percentage ARIMA Forecast")
+st.set_page_config(page_title="Low-Open ARIMA Forecast-PAVAN", layout="wide")
+st.title("📈 Low-Open Percentage ARIMA Forecast-PAVAN")
 st.markdown("Model and forecast the `(High - Open) / Open * 100` percentage using ARIMA")
 
 # Sidebar inputs
@@ -1732,9 +1733,9 @@ with col2:
     end_date = st.date_input("End Date", datetime.now())
 # ARIMA parameters
 st.sidebar.header("ARIMA Parameters")
-p = st.sidebar.slider("AR Order (p)", 0, 5, 1)
+p = st.sidebar.slider("AR Order (p)", 0, 3, 1)
 d = st.sidebar.slider("Differencing (d)", 0, 2, 1)
-q = st.sidebar.slider("MA Order (q)", 0, 5, 1)
+q = st.sidebar.slider("MA Order (q)", 0, 3, 1)
 
 forecast_days = st.sidebar.slider("Forecast Days", 1, 30, 5)
 
@@ -1774,7 +1775,7 @@ def safe_ljungbox(data, max_lag=10):
         return None, None, str(ex)
 
 # =============================================================================
-# HIGH-OPEN ARIMA FORECAST SECTION
+# LOW-OPEN ARIMA FORECAST SECTION
 # =============================================================================
 if run_forecast_btn:
     try:
@@ -1982,7 +1983,7 @@ if run_forecast_btn:
                         color='blue', alpha=0.3, label='95% Confidence Interval')
 
         ax4.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-        ax4.axhline(y=avg_pct, color='orange', linestyle='--', alpha=0.5,
+        ax4.axhline(y=avg_pct, color='red', linestyle='--', alpha=0.5,
                    label=f'Historical Avg: {avg_pct:.2f}%')
 
         ax4.set_xlabel('Date')
@@ -2005,10 +2006,10 @@ if run_forecast_btn:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            if forecast_trend > 0.5:
+            if forecast_trend > 1.0:
                 st.success("📈 Increasing Intraday Lows")
                 st.write("Expected larger drops from open to low")
-            elif forecast_trend < -0.5:
+            elif forecast_trend < 0.5:
                 st.error("📉 Decreasing Intraday Lows")
                 st.write("Expected smaller drops from open to low")
             else:
@@ -2017,9 +2018,9 @@ if run_forecast_btn:
 
         with col2:
             avg_forecast = float(forecast_mean.mean())
-            if avg_forecast > avg_pct + 0.5:
+            if avg_forecast > avg_pct + 1.0:
                 st.success("Above Average Drop Potential")
-            elif avg_forecast < avg_pct - 0.5:
+            elif avg_forecast < avg_pct+0.5:
                 st.warning("Below Average Drop Potential")
             else:
                 st.info("Normal Drop Range Expected")
@@ -2131,13 +2132,13 @@ if run_forecast_btn:
 
         # Stationarity check
         if adf_p <= 0.05:
-            quality_checks.append("✓ Original data is stationary")
+            quality_checks.append("✓ Original data has NO UNIT ROOT")
         else:
             quality_checks.append("✗ Original data is non-stationary")
 
         # White noise check
         if lb_p > 0.05:
-            quality_checks.append("✓ Residuals are white noise")
+            quality_checks.append("✓ Residuals show NO autocorrelation")
         else:
             quality_checks.append("✗ Residuals show autocorrelation")
 
@@ -2158,3 +2159,4 @@ if run_forecast_btn:
 with st.sidebar:
     st.markdown("---")
     st.markdown("""**"One of the funny things about the stock market is that every time one person buys, another sells, and both think they are astute"-William Feather**""")
+    st.markdown("""**gmail: pavankumarthota96@gmail.com**""")
