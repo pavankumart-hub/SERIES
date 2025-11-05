@@ -1737,7 +1737,7 @@ p = st.sidebar.slider("AR Order (p)", 0, 3, 1)
 d = st.sidebar.slider("Differencing (d)", 0, 2, 1)
 q = st.sidebar.slider("MA Order (q)", 0, 3, 1)
 
-forecast_days = st.sidebar.slider("Forecast Days", 1, 30, 5)
+forecast_days = st.sidebar.slider("Forecast Days", 1, 5, 1)
 
 run_forecast_btn = st.sidebar.button("Run Low-Open ARIMA Forecast", type="primary")
 
