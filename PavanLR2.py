@@ -1727,7 +1727,7 @@ ticker = st.sidebar.text_input("Stock Ticker", "AAPL").upper()
 
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    start_date = st.date_input("Start Date", datetime(2008, 1, 1))
+    start_date = st.date_input("Start Date", datetime(2010, 1, 1))
 with col2:
     end_date = st.date_input("End Date", datetime.now())
 # ARIMA parameters
@@ -1738,7 +1738,7 @@ q = st.sidebar.slider("MA Order (q)", 0, 5, 1)
 
 forecast_days = st.sidebar.slider("Forecast Days", 1, 30, 5)
 
-run_forecast_btn = st.sidebar.button("Run High-Open ARIMA Forecast", type="primary")
+run_forecast_btn = st.sidebar.button("Run Low-Open ARIMA Forecast", type="primary")
 
 def fit_arima_model(data, p, d, q):
     try:
@@ -1921,8 +1921,8 @@ if run_forecast_btn:
         st.subheader("🔄 Model Fit: Actual vs Fitted")
         fig3, ax3 = plt.subplots(figsize=(12, 6))
 
-        # Plot last 15 days for clarity
-        plot_days = min(15, len(low_open_data))
+        # Plot days for clarity
+        plot_days = len(low_open_data)
         ax3.plot(low_open_data.index[-plot_days:],
                 low_open_data['Low_Open_Pct'].iloc[-plot_days:],
                 label='Actual', linewidth=2, color='blue')
@@ -1965,8 +1965,8 @@ if run_forecast_btn:
         st.subheader("📈 Forecast Visualization")
         fig4, ax4 = plt.subplots(figsize=(12, 6))
 
-        # Plot historical data (last 100 days)
-        hist_days = min(15, len(low_open_data))
+        # Plot historical data 
+        hist_days = len(low_open_data)
         ax4.plot(low_open_data.index[-hist_days:],
                 low_open_data['Low_Open_Pct'].iloc[-hist_days:],
                 label='Historical', linewidth=2, color='blue')
