@@ -1826,7 +1826,7 @@ if run_forecast_btn:
         fig1, ax1 = plt.subplots(figsize=(12, 6))
 
         ax1.plot(high_open_data.index, high_open_data['High_Open_Pct'],
-                linewidth=1, alpha=0.7, color='blue', label='Daily %')
+                linewidth=1, alpha=0.7, color='green', label='Daily %')
 
         # Add rolling average
         rolling_avg = high_open_data['High_Open_Pct'].rolling(window=20).mean()
@@ -1834,7 +1834,7 @@ if run_forecast_btn:
                 linewidth=2, color='red', label='20-Day Moving Avg')
 
         ax1.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-        ax1.axhline(y=avg_pct, color='green', linestyle='--', alpha=0.7,
+        ax1.axhline(y=avg_pct, color='blue', linestyle='--', alpha=0.7,
                    label=f'Overall Avg: {avg_pct:.2f}%')
 
         ax1.set_xlabel('Date')
@@ -1922,15 +1922,15 @@ if run_forecast_btn:
         st.subheader("🔄 Model Fit: Actual vs Fitted")
         fig3, ax3 = plt.subplots(figsize=(12, 6))
 
-        # Plot last 100 days for clarity
-        plot_days = min(100, len(high_open_data))
+        # Plot last 15 days for clarity
+        plot_days = min(15, len(high_open_data))
         ax3.plot(high_open_data.index[-plot_days:],
                 high_open_data['High_Open_Pct'].iloc[-plot_days:],
-                label='Actual', linewidth=2, color='blue')
+                label='Actual', linewidth=2, color='green')
 
         # Plot cleaned fitted values
         ax3.plot(fitted_dates_clean, fitted_values_clean,
-                label='ARIMA Fitted', linewidth=2, linestyle='--', color='red')
+                label='ARIMA Fitted', linewidth=2, linestyle='--', color='blue')
 
         ax3.axhline(y=0, color='black', linestyle='-', alpha=0.3)
         ax3.set_xlabel('Date')
@@ -1967,10 +1967,10 @@ if run_forecast_btn:
         fig4, ax4 = plt.subplots(figsize=(12, 6))
 
         # Plot historical data (last 100 days)
-        hist_days = min(100, len(high_open_data))
+        hist_days = min(15, len(high_open_data))
         ax4.plot(high_open_data.index[-hist_days:],
                 high_open_data['High_Open_Pct'].iloc[-hist_days:],
-                label='Historical', linewidth=2, color='blue')
+                label='Historical', linewidth=2, color='green')
 
         # Plot forecast
         forecast_values = [float(x) for x in forecast_mean]
@@ -1980,7 +1980,7 @@ if run_forecast_btn:
         ax4.plot(future_dates, forecast_values,
                 label='Forecast', linewidth=3, color='red', marker='o', markersize=6)
         ax4.fill_between(future_dates, ci_lower_values, ci_upper_values,
-                        color='pink', alpha=0.3, label='95% Confidence Interval')
+                        color='green', alpha=0.3, label='95% Confidence Interval')
 
         ax4.axhline(y=0, color='black', linestyle='-', alpha=0.3)
         ax4.axhline(y=avg_pct, color='green', linestyle='--', alpha=0.5,
@@ -2105,14 +2105,14 @@ if run_forecast_btn:
 
         # Time series plot of residuals
         residual_dates = high_open_data.index[len(high_open_data) - len(residuals_clean):]
-        ax1.plot(residual_dates, residuals_clean, label='Residuals', color='blue')
+        ax1.plot(residual_dates, residuals_clean, label='Residuals', color='red')
         ax1.axhline(0, color='red', linestyle='--', alpha=0.7)
         ax1.set_title('Model Residuals Over Time')
         ax1.legend()
         ax1.grid(alpha=0.3)
 
         # Histogram of residuals
-        ax2.hist(residuals_clean.dropna(), bins=30, alpha=0.7, color='skyblue', edgecolor='black', density=True)
+        ax2.hist(residuals_clean.dropna(), bins=75, alpha=0.7, color='orange', edgecolor='black', density=True)
 
         # Add normal distribution curve
         from scipy.stats import norm
