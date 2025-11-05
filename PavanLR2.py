@@ -1776,41 +1776,40 @@ def safe_ljungbox(data, max_lag=10):
 # =============================================================================
 # HIGH-OPEN ARIMA FORECAST SECTION
 # =============================================================================
-
 if run_forecast_btn:
     try:
         with st.spinner(f"Downloading {ticker} data..."):
             data = yf.download(ticker, start=start_date, end=end_date, progress=False)
 
-        if data is None or data.empty or 'High' not in data.columns or 'Open' not in data.columns:
-            st.error("High/Open price data not available. Check ticker symbol.")
+        if data is None or data.empty or 'Low' not in data.columns or 'Open' not in data.columns:
+            st.error("Low/Open price data not available. Check ticker symbol.")
             st.stop()
 
-        # Calculate High-Open percentage
-        high_open_data = data[['High', 'Open']].copy()
-        high_open_data = high_open_data.dropna()
+        # Calculate Low-Open percentage
+        low_open_data = data[['Low', 'Open']].copy()
+        low_open_data = low_open_data.dropna()
 
-        # Calculate percentage: (High - Open) / Open * 100
-        high_open_data['High_Open_Pct'] = ((high_open_data['High'] - high_open_data['Open']) / high_open_data['Open']) * 100
+        # Calculate percentage: (Open - Low) / Open * 100
+        low_open_data['Low_Open_Pct'] = ((low_open_data['Open'] - low_open_data['Low']) / low_open_data['Open']) * 100
 
         # Remove any infinite values
-        high_open_data = high_open_data[np.isfinite(high_open_data['High_Open_Pct'])]
+        low_open_data = low_open_data[np.isfinite(low_open_data['Low_Open_Pct'])]
 
-        if len(high_open_data) < 30:
-            st.error(f"Not enough data points ({len(high_open_data)}). Need at least 30 days.")
+        if len(low_open_data) < 30:
+            st.error(f"Not enough data points ({len(low_open_data)}). Need at least 30 days.")
             st.stop()
 
-        st.header(f"High-Open Analysis for {ticker}")
+        st.header(f"Low-Open Analysis for {ticker}")
 
         # Display basic statistics
         st.subheader("📊 Basic Statistics")
         col1, col2, col3, col4 = st.columns(4)
 
-        current_pct = float(high_open_data['High_Open_Pct'].iloc[-1])
-        avg_pct = float(high_open_data['High_Open_Pct'].mean())
-        max_pct = float(high_open_data['High_Open_Pct'].max())
-        min_pct = float(high_open_data['High_Open_Pct'].min())
-        std_pct = float(high_open_data['High_Open_Pct'].std())
+        current_pct = float(low_open_data['Low_Open_Pct'].iloc[-1])
+        avg_pct = float(low_open_data['Low_Open_Pct'].mean())
+        max_pct = float(low_open_data['Low_Open_Pct'].max())
+        min_pct = float(low_open_data['Low_Open_Pct'].min())
+        std_pct = float(low_open_data['Low_Open_Pct'].std())
 
         with col1:
             st.metric("Current %", f"{current_pct:.2f}%")
@@ -1821,25 +1820,25 @@ if run_forecast_btn:
         with col4:
             st.metric("Std Dev %", f"{std_pct:.2f}%")
 
-        # Plot historical High-Open percentage
-        st.subheader("📈 Historical High-Open Percentage")
+        # Plot historical Low-Open percentage
+        st.subheader("📈 Historical Low-Open Percentage")
         fig1, ax1 = plt.subplots(figsize=(12, 6))
 
-        ax1.plot(high_open_data.index, high_open_data['High_Open_Pct'],
-                linewidth=1, alpha=0.7, color='green', label='Daily %')
+        ax1.plot(low_open_data.index, low_open_data['Low_Open_Pct'],
+                linewidth=1, alpha=0.7, color='blue', label='Daily %')
 
         # Add rolling average
-        rolling_avg = high_open_data['High_Open_Pct'].rolling(window=20).mean()
-        ax1.plot(high_open_data.index, rolling_avg,
+        rolling_avg = low_open_data['Low_Open_Pct'].rolling(window=20).mean()
+        ax1.plot(low_open_data.index, rolling_avg,
                 linewidth=2, color='red', label='20-Day Moving Avg')
 
         ax1.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-        ax1.axhline(y=avg_pct, color='blue', linestyle='--', alpha=0.7,
+        ax1.axhline(y=avg_pct, color='green', linestyle='--', alpha=0.7,
                    label=f'Overall Avg: {avg_pct:.2f}%')
 
         ax1.set_xlabel('Date')
         ax1.set_ylabel('Percentage (%)')
-        ax1.set_title(f'{ticker} Historical (High-Open)/Open Percentage')
+        ax1.set_title(f'{ticker} Historical (Open-Low)/Open Percentage')
         ax1.legend()
         ax1.grid(alpha=0.3)
         plt.xticks(rotation=45)
@@ -1848,7 +1847,7 @@ if run_forecast_btn:
 
         # Stationarity test
         st.subheader("📊 Stationarity Analysis")
-        adf_stat, adf_p, adf_err = safe_adfuller(high_open_data['High_Open_Pct'])
+        adf_stat, adf_p, adf_err = safe_adfuller(low_open_data['Low_Open_Pct'])
 
         if adf_err:
             st.error(f"ADF test error: {adf_err}")
@@ -1865,9 +1864,9 @@ if run_forecast_btn:
         # ACF and PACF plots
         st.subheader("📊 ACF and PACF Plots")
         fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-        plot_acf(high_open_data['High_Open_Pct'], ax=ax1, lags=20)
+        plot_acf(low_open_data['Low_Open_Pct'], ax=ax1, lags=20)
         ax1.set_title("Autocorrelation Function (ACF)")
-        plot_pacf(high_open_data['High_Open_Pct'], ax=ax2, lags=20)
+        plot_pacf(low_open_data['Low_Open_Pct'], ax=ax2, lags=20)
         ax2.set_title("Partial Autocorrelation Function (PACF)")
         plt.tight_layout()
         st.pyplot(fig2)
@@ -1879,7 +1878,7 @@ if run_forecast_btn:
         st.header("🎯 ARIMA Forecasting")
 
         with st.spinner("Fitting ARIMA model..."):
-            model, error = fit_arima_model(high_open_data['High_Open_Pct'], p, d, q)
+            model, error = fit_arima_model(low_open_data['Low_Open_Pct'], p, d, q)
 
             if error:
                 st.error(f"ARIMA model fitting failed: {error}")
@@ -1891,10 +1890,10 @@ if run_forecast_btn:
             # Remove first 'd' values due to differencing
             if len(fitted_values) > d:
                 fitted_values_clean = fitted_values.iloc[d:]
-                fitted_dates_clean = high_open_data.index[len(high_open_data) - len(fitted_values) + d:]
+                fitted_dates_clean = low_open_data.index[len(low_open_data) - len(fitted_values) + d:]
             else:
                 fitted_values_clean = fitted_values
-                fitted_dates_clean = high_open_data.index[len(high_open_data) - len(fitted_values):]
+                fitted_dates_clean = low_open_data.index[len(low_open_data) - len(fitted_values):]
 
             # Forecast future values
             forecast = model.get_forecast(steps=forecast_days)
@@ -1902,7 +1901,7 @@ if run_forecast_btn:
             forecast_ci = forecast.conf_int()
 
             # Generate future dates
-            last_date = high_open_data.index[-1]
+            last_date = low_open_data.index[-1]
             future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_days + 1)]
 
         # Display model summary
@@ -1923,14 +1922,14 @@ if run_forecast_btn:
         fig3, ax3 = plt.subplots(figsize=(12, 6))
 
         # Plot last 15 days for clarity
-        plot_days = min(15, len(high_open_data))
-        ax3.plot(high_open_data.index[-plot_days:],
-                high_open_data['High_Open_Pct'].iloc[-plot_days:],
-                label='Actual', linewidth=2, color='green')
+        plot_days = min(15, len(low_open_data))
+        ax3.plot(low_open_data.index[-plot_days:],
+                low_open_data['Low_Open_Pct'].iloc[-plot_days:],
+                label='Actual', linewidth=2, color='blue')
 
         # Plot cleaned fitted values
         ax3.plot(fitted_dates_clean, fitted_values_clean,
-                label='ARIMA Fitted', linewidth=2, linestyle='--', color='blue')
+                label='ARIMA Fitted', linewidth=2, linestyle='--', color='orange')
 
         ax3.axhline(y=0, color='black', linestyle='-', alpha=0.3)
         ax3.set_xlabel('Date')
@@ -1967,10 +1966,10 @@ if run_forecast_btn:
         fig4, ax4 = plt.subplots(figsize=(12, 6))
 
         # Plot historical data (last 100 days)
-        hist_days = min(15, len(high_open_data))
-        ax4.plot(high_open_data.index[-hist_days:],
-                high_open_data['High_Open_Pct'].iloc[-hist_days:],
-                label='Historical', linewidth=2, color='green')
+        hist_days = min(15, len(low_open_data))
+        ax4.plot(low_open_data.index[-hist_days:],
+                low_open_data['Low_Open_Pct'].iloc[-hist_days:],
+                label='Historical', linewidth=2, color='blue')
 
         # Plot forecast
         forecast_values = [float(x) for x in forecast_mean]
@@ -1980,7 +1979,7 @@ if run_forecast_btn:
         ax4.plot(future_dates, forecast_values,
                 label='Forecast', linewidth=3, color='red', marker='o', markersize=6)
         ax4.fill_between(future_dates, ci_lower_values, ci_upper_values,
-                        color='green', alpha=0.3, label='95% Confidence Interval')
+                        color='blue', alpha=0.3, label='95% Confidence Interval')
 
         ax4.axhline(y=0, color='black', linestyle='-', alpha=0.3)
         ax4.axhline(y=avg_pct, color='green', linestyle='--', alpha=0.5,
@@ -1988,7 +1987,7 @@ if run_forecast_btn:
 
         ax4.set_xlabel('Date')
         ax4.set_ylabel('Percentage (%)')
-        ax4.set_title(f'ARIMA({p},{d},{q}): {forecast_days}-Day High-Open Percentage Forecast')
+        ax4.set_title(f'ARIMA({p},{d},{q}): {forecast_days}-Day Low-Open Percentage Forecast')
         ax4.legend()
         ax4.grid(alpha=0.3)
         plt.xticks(rotation=45)
@@ -2007,23 +2006,23 @@ if run_forecast_btn:
 
         with col1:
             if forecast_trend > 0.5:
-                st.success("📈 Bullish Forecast Trend")
-                st.write("Expected increasing intraday highs")
+                st.success("📈 Increasing Intraday Lows")
+                st.write("Expected larger drops from open to low")
             elif forecast_trend < -0.5:
-                st.error("📉 Bearish Forecast Trend")
-                st.write("Expected decreasing intraday highs")
+                st.error("📉 Decreasing Intraday Lows")
+                st.write("Expected smaller drops from open to low")
             else:
-                st.info("➡️ Neutral Forecast Trend")
-                st.write("Stable intraday high patterns expected")
+                st.info("➡️ Stable Intraday Low Patterns")
+                st.write("Consistent open-to-low patterns expected")
 
         with col2:
             avg_forecast = float(forecast_mean.mean())
             if avg_forecast > avg_pct + 0.5:
-                st.success("Above Average Potential")
+                st.success("Above Average Drop Potential")
             elif avg_forecast < avg_pct - 0.5:
-                st.warning("Below Average Potential")
+                st.warning("Below Average Drop Potential")
             else:
-                st.info("Normal Range Expected")
+                st.info("Normal Drop Range Expected")
 
         with col3:
             uncertainty = np.mean([ci_upper_values[i] - ci_lower_values[i] for i in range(forecast_days)])
@@ -2104,7 +2103,7 @@ if run_forecast_btn:
         fig5, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
         # Time series plot of residuals
-        residual_dates = high_open_data.index[len(high_open_data) - len(residuals_clean):]
+        residual_dates = low_open_data.index[len(low_open_data) - len(residuals_clean):]
         ax1.plot(residual_dates, residuals_clean, label='Residuals', color='red')
         ax1.axhline(0, color='red', linestyle='--', alpha=0.7)
         ax1.set_title('Model Residuals Over Time')
