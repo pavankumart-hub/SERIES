@@ -222,7 +222,8 @@ if run_analysis_btn:
             st.stop()
 
         X = (dates - dates_mean) / dates_range
-        y = price_data.values.astype(float)
+        y = price_data.values.astype(float).ravel()
+
         # Polynomial regression model
         poly = PolynomialFeatures(degree=degree, include_bias=False)
         X_poly = poly.fit_transform(X)
