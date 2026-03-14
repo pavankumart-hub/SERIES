@@ -16,11 +16,11 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="📈 PAVAN-HYBRID ARIMA Stock Forecast (stable)", layout="wide")
-st.title("Polynomial Regression + ARIMA Stock Forecast-PAVAN")
+st.set_page_config(page_title="📈 HYBRID ARIMA Stock Forecast (stable)", layout="wide")
+st.title("Polynomial Regression + ARIMA Stock Forecast")
 st.markdown("Wait a moment, something extraordinary is about to unfold.")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
-st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PAVAN KUMAR THOTA")
+st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PKT")
 st.markdown("Earning in the face of Risk-STOCK MARKET")
 st.markdown("Tests: ADF, KPSS, PP, Jarque-Bera, L-jung Box")
 
@@ -242,7 +242,7 @@ if run_analysis_btn:
         next_day_prediction = model.predict(next_day_poly)
 
         # Convert to scalar values to avoid numpy array formatting issues
-        current_price = float(y[-1]) if hasattr(y[-1], '__iter__') else y[-1]
+        current_price = float(y[-1])
         predicted_price = float(next_day_prediction[0])
         price_change = predicted_price - current_price
         percent_change = (price_change / current_price) * 100
@@ -1718,8 +1718,8 @@ if run_analysis_btn:
             else:
                 st.warning("Low and Open price data not available for analysis")
 #Second Analysis
-st.set_page_config(page_title="Low-Open ARIMA Forecast-PAVAN", layout="wide")
-st.title("📈 Low-Open Percentage ARIMA Forecast-PAVAN")
+st.set_page_config(page_title="Low-Open ARIMA Forecast", layout="wide")
+st.title("📈 Low-Open Percentage ARIMA Forecast")
 st.markdown("Model and forecast the `(High - Open) / Open * 100` percentage using ARIMA")
 
 # Sidebar inputs
