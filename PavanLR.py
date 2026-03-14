@@ -16,10 +16,10 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="📈 PAVAN-HYBRID ARIMA Stock Forecast (stable)", layout="wide")
+st.set_page_config(page_title="📈 HYBRID ARIMA Stock Forecast (stable)", layout="wide")
 st.title("Polynomial Regression + ARIMA Stock Forecast")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
-st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PAVAN KUMAR THOTA")
+st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PKT")
 st.markdown("Earning in the face of Risk-STOCK MARKET")
 st.markdown("Tests: ADF, KPSS, PP, Jarque-Bera, L-jung Box")
 
