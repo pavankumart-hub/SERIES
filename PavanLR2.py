@@ -49,7 +49,13 @@ if not recent_data.empty:
 else:
     st.sidebar.error("No recent market data found.")
     st.stop()
-# Calendar date selection
+
+if not recent_data.empty:
+    max_date = recent_data.index[-1].date()
+else:
+    max_date = datetime.now().date()
+
+
 col1, col2 = st.sidebar.columns(2)
 with col1:
     start_date = st.date_input("Start Date",
@@ -57,10 +63,15 @@ with col1:
                               min_value=datetime(2010, 1, 1).date(),
                               max_value=datetime.now().date())
 with col2:
-    end_date = st.date_input("Forecast Date",
-                            value=datetime.now().date(),
-                            min_value=datetime(2010, 1, 1).date(),
-                            max_value=recent_data.index[-1].date())
+    end_date = st.date_input(
+    "Forecast Date",
+    value=max_date,
+    min_value=datetime(2010, 1, 1).date(),
+    max_value=max_date)
+# )end_date = st.date_input("Forecast Date",
+#                             value=datetime.now().date(),
+#                             min_value=datetime(2010, 1, 1).date(),
+#                             max_value=recent_data.index[-1].date())
 
 # Price type selection
 price_type = st.sidebar.selectbox("Select Dependent Price Type (Y)", ["High", "Low", "Open", "Close", "Adj Close"])
