@@ -31,7 +31,7 @@ ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
 # Calendar date selection
 open_price_date = st.sidebar.date_input(
     "Select Date for Open Price",
-    value=end_date,
+    value=datetime.now().date(),
     min_value=datetime(2010, 1, 1).date(),
     max_value=datetime.now().date()
 )
