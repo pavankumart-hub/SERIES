@@ -249,8 +249,9 @@ if run_analysis_btn:
         percent_change = (price_change / current_price) * 100
 
         # Streamlit display
-        st.subheader("0 Crude 🟢🟢🟢Next Day Forecast🟢🟢🟢")
 
+        st.subheader("0 Crude 🟢🟢🟢Next Day Forecast🟢🟢🟢")
+        st.write("1. Polynomial Regression🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠")
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric(
@@ -265,7 +266,7 @@ if run_analysis_btn:
            
         with col3:
             st.metric(
-                label=f"Predicted {price_type} Price",
+                label=f"🟢Predicted {price_type} Price🟢",
                 value=f"{currency_symbol}{predicted_price:.2f}",
                 delta=f"{price_change:.2f}"
             )
@@ -457,8 +458,9 @@ if run_analysis_btn:
                 st.error("✗ Significant Autocorrelation Present (p-value ≤ 0.05)")
 
         # ARIMA Analysis on Residuals
-        st.header("ARIMA Analysis on Residuals")
-
+        
+        st.header("🟠🟠🟠🟠1.1 ARIMA Analysis on Residuals FINE TUNING🟠🟠🟠🟠")
+        st.write("🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠")
         st.write(f"**ARIMA Parameters Range:**")
         st.write(f"- P (AR): {p_range[0]} to {p_range[1]}")
         st.write(f"- D (Differencing): {d_range[0]} to {d_range[1]}")
@@ -532,7 +534,7 @@ if run_analysis_btn:
             st.pyplot(fig)
 
             # ARIMA Forecast for next 5 days
-            st.subheader("ARIMA Forecast for Next 5 Days (Residuals)")
+            st.subheader("🟢🟢🟢ARIMA Forecast for Next 5 Days (Residuals)🟢🟢")
 
             # Forecast next 2 days
             forecast_steps = 2
@@ -555,10 +557,10 @@ if run_analysis_btn:
             future_dates = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
 
             # PRINT THE 5 FORECASTED VALUES CLEARLY
-            st.subheader("🎯 2 Forecasted Residual Values")
+            st.subheader("🟢🟢🟢2 Forecasted Residual Values🟢🟢🟢")
 
             # Method 1: Simple list - FIXED: Extract scalar values
-            st.write("**Forecasted Values:**")
+            st.write("**🟢🟢🟢Forecasted Values🟢🟢:**")
             for i in range(forecast_steps):
                 forecast_value = float(residual_forecast[i])
                 st.write(f"Day {i+1} ({future_dates[i].strftime('%Y-%m-%d')}): {currency_symbol}{forecast_value:.6f}")
@@ -592,7 +594,7 @@ if run_analysis_btn:
             # Plot historical residuals (last 30 points for clarity)
             plot_points = min(30, len(residuals))
             ax.plot(price_data.index[-plot_points:], residuals[-plot_points:],
-                   label='Historical Residuals', linewidth=2, color='blue')
+                   label='Historical Residuals', linewidth=2, color='red')
 
             # Plot forecast - FIXED: Ensure we're plotting scalar values
             forecast_scalar = [float(x) for x in residual_forecast]
@@ -600,11 +602,11 @@ if run_analysis_btn:
             ci_upper_scalar = [float(x) for x in residual_ci_upper]
 
             ax.plot(future_dates, forecast_scalar, label='ARIMA Forecast',
-                   linewidth=3, color='red', marker='o', markersize=8)
+                   linewidth=3, color='green', marker='o', markersize=8)
             ax.fill_between(future_dates, ci_lower_scalar, ci_upper_scalar,
-                          color='pink', alpha=0.3, label='95% Confidence Interval')
+                          color='pink', alpha=0.7, label='95% Confidence Interval')
 
-            ax.axhline(0, linestyle='-', color='k', alpha=0.3)
+            ax.axhline(0, linestyle='-', color='k', alpha=0.8)
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Residual Value ({currency_symbol})')
             ax.set_title(f'ARIMA({best_model_info["p"]},{best_model_info["d"]},{best_model_info["q"]}): 2-Day Residual Forecast')
@@ -615,8 +617,9 @@ if run_analysis_btn:
             st.pyplot(fig)
 
         #Polynomial Regression with Multiple Features
-        st.header("📊 Polynomial Regression with Multiple Features")
-
+        
+        st.header("🟠🟠🟠2.Polynomial Regression with Multiple Features🟠🟠🟠")
+        st.write("🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠")
         # Prepare features (dates as ordinal)
         dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
         dates_mean = float(dates.mean(axis=0)[0])
@@ -819,34 +822,73 @@ if run_analysis_btn:
         st.subheader("📈 Model Performance")
         col1, col2, col3 = st.columns(3)
         with col1:
-                st.metric("R² Score", f"{r2:.4f}")
+                st.metric("🔴RMSE", f"{rmse:.4f}")
         with col2:
-                st.metric("MSE", f"{mse:.4f}")
+                st.metric("🟢R² Score", f"{r2:.4f}")
+                
 
-        # Forecast next day value
-        st.subheader("🔮 Next Day Forecast")
+        st.header("🟢🟢🟢 Next Day Forecast🟢🟢🟢 ")
 
         today_open = today_open_input
-
-        # Get last date and prepare for forecasting
+        
+        # Last normalized date
         last_date = X_dates[-1][0]
-        next_date = last_date + (1 / dates_range)  # Forecast only one day ahead
-
-        # Print next date for debugging
+        
+        # Next normalized date
+        next_date = last_date + (1 / dates_range)
+        
         st.write(f"Last normalized date: {last_date}")
         st.write(f"Next normalized date: {next_date}")
-
-        # Calculate actual next date
+        
+        # Actual next date
         next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
+        
         st.write(f"Next actual date: {next_actual_date.strftime('%Y-%m-%d')}")
-        # Create next day's features with user-provided open price
-        next_features = np.array([[next_date, today_open]])
+        
+        # Build next day features
+        next_features = np.array([[next_date, float(today_open)]])
+        
         next_poly = poly.transform(next_features)
+        
+        # Predict
         next_pred = model.predict(next_poly)
-        forecast_value = float(next_pred[0])
+        
+        # Extract scalar safely
+        forecast_value = next_pred.item()
+        
+        # Display forecast
+        st.success(
+            f"📈 Forecasted {price_type} for {next_actual_date.strftime('%Y-%m-%d')} : "
+            f"{currency_symbol}{forecast_value:.4f}"
+        )
+        
+        # Debug (optional)
+        st.write("Prediction raw output:", next_pred)
+        st.write("Prediction shape:", next_pred.shape)# Forecast next day value
+    
+        # st.subheader("🟢🟢🟢 Next Day Forecast🟢🟢🟢")
 
-        # Calculate actual next date
-        next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
+        # today_open = today_open_input
+
+        # # Get last date and prepare for forecasting
+        # last_date = X_dates[-1][0]
+        # next_date = last_date + (1 / dates_range)  # Forecast only one day ahead
+
+        # # Print next date for debugging
+        # st.write(f"Last normalized date: {last_date}")
+        # st.write(f"Next normalized date: {next_date}")
+
+        # # Calculate actual next date
+        # next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
+        # st.write(f"Next actual date: {next_actual_date.strftime('%Y-%m-%d')}")
+        # # Create next day's features with user-provided open price
+        # next_features = np.array([[next_date, today_open]])
+        # next_poly = poly.transform(next_features)
+        # next_pred = model.predict(next_poly)
+        # forecast_value = float(next_pred[0])
+
+        # # Calculate actual next date
+        # next_actual_date = price_data.index[-1] + pd.Timedelta(days=1)
 
         # Display forecast
         col1, col2, col3 = st.columns(3)
