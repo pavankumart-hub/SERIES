@@ -29,13 +29,6 @@ st.sidebar.header("INPUT-ARIMA ORIGINAL")
 ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
 
 # Calendar date selection
-open_price_date = st.sidebar.date_input(
-    "Select Date for Open Price",
-    value=datetime.now().date(),
-    min_value=datetime(2010, 1, 1).date(),
-    max_value=datetime.now().date()
-)
-
 col1, col2 = st.sidebar.columns(2)
 with col1:
     start_date = st.date_input("Start Date",
@@ -57,20 +50,30 @@ st.sidebar.header("Forecast Input")
 #                                        min_value=0.0,
 #                                        step=0.1,
 #                                        key="today_open_input")
-price_data = yf.download(
+
+# Get today and 3 days before
+today = datetime.now().date()
+start_fetch = today - timedelta(days=3)
+
+# Download last 3 days data
+recent_data = yf.download(
     ticker,
-    start=start_date,
-    end=end_date,
+    start=start_fetch,
+    end=today + timedelta(days=1),  # include today
     auto_adjust=True
 )
 
-# Fetch open price from Yahoo Finance
-try:
-    today_open_input = float(price_data.loc[str(open_price_date), "Open"])
-    st.sidebar.success(f"Open Price: {today_open_input:.2f}")
-except KeyError:
-    st.sidebar.error("Market closed on selected date.")
+if not recent_data.empty:
+    # take latest available open price
+    today_open_input = float(recent_data["Open"].iloc[-1])
+
+    st.sidebar.success(f"Open Price Used: {today_open_input:.2f}")
+    st.sidebar.write(f"Date Used: {recent_data.index[-1].date()}")
+
+else:
+    st.sidebar.error("No recent market data found.")
     st.stop()
+    
 degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 
 # ARIMA parameters
