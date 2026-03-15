@@ -50,6 +50,13 @@ st.sidebar.header("Forecast Input")
 #                                        min_value=0.0,
 #                                        step=0.1,
 #                                        key="today_open_input")
+price_data = yf.download(
+    ticker,
+    start=start_date,
+    end=end_date,
+    auto_adjust=True
+)
+
 open_price_date = st.sidebar.date_input(
     "Select Date for Open Price",
     value=end_date,
