@@ -1230,7 +1230,7 @@ if run_analysis_btn:
 
             # Get the corresponding dates for the residuals (adjust for removed values)
             residual_dates = price_data.index[len(price_data) - len(arima_residuals_clean):]
-            ax.plot(residual_dates, arima_residuals_clean, label='ARIMA Residuals', linewidth=1,color="red)
+            ax.plot(residual_dates, arima_residuals_clean, label='ARIMA Residuals', linewidth=1,color="red")
             ax.axhline(0, linestyle='--', color='k')
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Residual ({currency_symbol})')
