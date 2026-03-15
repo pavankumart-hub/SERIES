@@ -187,14 +187,14 @@ if run_analysis_btn:
         col1, col2, col3 = st.columns(3)
         with col1:
             current_price = float(price_data.iloc[-1])
-            st.metric(f"Current {price_type} Price", f"{currency_symbol}{current_price:.2f}")
+            st.metric(f"Previous {price_type} Price", f"{currency_symbol}{current_price:.2f}")
         with col2:
-            st.metric("Data Points", n)
+            st.metric("True Data Points", n)
         with col3:
             actual_days = (price_data.index[-1] - price_data.index[0]).days
             st.metric("Analysis Period (days)", actual_days)
         # KPSS Test on original data
-        st.subheader("KPSS Test - Stationarity Check (Original Data)")
+        st.subheader("🔧⚙️KPSS Test - Stationarity Check (Original Data)🔧⚙️")
         kpss_stat, kpss_p, kpss_critical_values, kpss_err = safe_kpss(price_data)
 
         if kpss_err:
@@ -249,17 +249,23 @@ if run_analysis_btn:
         percent_change = (price_change / current_price) * 100
 
         # Streamlit display
-        st.subheader("📈 Next Day Forecast")
+        st.subheader("0 Crude 🟢🟢🟢Next Day Forecast"🟢🟢🟢)
 
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric(
-                label="Current Price",
+                label=f"Previous {price_type} Price",
                 value=f"{currency_symbol}{current_price:.2f}"
             )
         with col2:
             st.metric(
-                label="Predicted Price",
+                label=f"Current Open Price",
+                value=f"{currency_symbol}{today_open_input:.2f}"
+            )
+           
+        with col3:
+            st.metric(
+                label=f"Predicted {price_type} Price",
                 value=f"{currency_symbol}{predicted_price:.2f}",
                 delta=f"{price_change:.2f}"
             )
@@ -302,10 +308,10 @@ if run_analysis_btn:
         rmse = float(np.sqrt(mean_squared_error(y, y_pred)))
         r2 = float(r2_score(y, y_pred))
 
-        st.subheader("Polynomial Model Performance")
+        st.subheader("🩺Polynomial Model Performance🩺")
         c1, c2 = st.columns(2)
-        c1.metric("RMSE", f"{currency_symbol}{rmse:.4f}")
-        c2.metric("R²", f"{r2:.4f}")
+        c1.metric("🔴RMSE", f"{currency_symbol}{rmse:.4f}")
+        c2.metric("🟢R²", f"{r2:.4f}")
 
         # Plot actual vs predicted
         st.subheader(f"Actual vs Predicted (Degree = {degree})")
@@ -368,6 +374,7 @@ if run_analysis_btn:
         st.subheader("Residual Distribution Analysis")
 
         # Calculate statistics - FIXED: Ensure scalar values
+        residuals = residuals.dropna()
         residual_skew = float(skew(residuals))
         residual_kurtosis = float(kurtosis(residuals))
         residual_mean = float(np.mean(residuals))
