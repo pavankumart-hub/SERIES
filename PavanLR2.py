@@ -374,7 +374,7 @@ if run_analysis_btn:
         st.subheader("Residual Distribution Analysis")
 
         # Calculate statistics - FIXED: Ensure scalar values
-        residuals = residuals.dropna()
+        residuals = residuals[~np.isnan(residuals)]
         residual_skew = float(skew(residuals))
         residual_kurtosis = float(kurtosis(residuals))
         residual_mean = float(np.mean(residuals))
