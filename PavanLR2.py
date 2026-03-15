@@ -249,7 +249,7 @@ if run_analysis_btn:
         percent_change = (price_change / current_price) * 100
 
         # Streamlit display
-        st.subheader("0 Crude 🟢🟢🟢Next Day Forecast"🟢🟢🟢)
+        st.subheader("0 Crude 🟢🟢🟢Next Day Forecast🟢🟢🟢")
 
         col1, col2, col3 = st.columns(3)
         with col1:
