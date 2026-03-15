@@ -29,6 +29,13 @@ st.sidebar.header("INPUT-ARIMA ORIGINAL")
 ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
 
 # Calendar date selection
+open_price_date = st.sidebar.date_input(
+    "Select Date for Open Price",
+    value=end_date,
+    min_value=datetime(2010, 1, 1).date(),
+    max_value=datetime.now().date()
+)
+
 col1, col2 = st.sidebar.columns(2)
 with col1:
     start_date = st.date_input("Start Date",
@@ -57,12 +64,6 @@ price_data = yf.download(
     auto_adjust=True
 )
 
-open_price_date = st.sidebar.date_input(
-    "Select Date for Open Price",
-    value=end_date,
-    min_value=start_date,
-    max_value=end_date
-)
 # Fetch open price from Yahoo Finance
 try:
     today_open_input = float(price_data.loc[str(open_price_date), "Open"])
