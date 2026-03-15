@@ -45,11 +45,24 @@ with col2:
 price_type = st.sidebar.selectbox("Select Dependent Price Type (Y)", ["High", "Low", "Open", "Close", "Adj Close"])
 price_type1 = st.sidebar.selectbox("Select Independent Price Type (X)", [ "Open"])
 st.sidebar.header("Forecast Input")
-today_open_input = st.sidebar.number_input(f"Enter Today's Open Price",
-                                       value=100.0,
-                                       min_value=0.0,
-                                       step=0.1,
-                                       key="today_open_input")
+# today_open_input = st.sidebar.number_input(f"Enter Today's Open Price",
+#                                        value=100.0,
+#                                        min_value=0.0,
+#                                        step=0.1,
+#                                        key="today_open_input")
+open_price_date = st.sidebar.date_input(
+    "Select Date for Open Price",
+    value=end_date,
+    min_value=start_date,
+    max_value=end_date
+)
+# Fetch open price from Yahoo Finance
+try:
+    today_open_input = float(price_data.loc[str(open_price_date), "Open"])
+    st.sidebar.success(f"Open Price: {today_open_input:.2f}")
+except KeyError:
+    st.sidebar.error("Market closed on selected date.")
+    st.stop()
 degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 
 # ARIMA parameters
