@@ -27,30 +27,6 @@ st.markdown("Tests: ADF, KPSS, PP, Jarque-Bera, L-jung Box")
 # Sidebar inputs
 st.sidebar.header("INPUT-ARIMA ORIGINAL")
 ticker = st.sidebar.text_input("Stock Ticker", "TATASTEEL.NS").upper()
-
-# Calendar date selection
-col1, col2 = st.sidebar.columns(2)
-with col1:
-    start_date = st.date_input("Start Date",
-                              value=datetime(2010, 1, 1).date(),
-                              min_value=datetime(2010, 1, 1).date(),
-                              max_value=datetime.now().date())
-with col2:
-    end_date = st.date_input("End Date",
-                            value=datetime.now().date(),
-                            min_value=datetime(2010, 1, 1).date(),
-                            max_value=datetime.now().date())
-
-# Price type selection
-price_type = st.sidebar.selectbox("Select Dependent Price Type (Y)", ["High", "Low", "Open", "Close", "Adj Close"])
-price_type1 = st.sidebar.selectbox("Select Independent Price Type (X)", [ "Open"])
-st.sidebar.header("Forecast Input")
-# today_open_input = st.sidebar.number_input(f"Enter Today's Open Price",
-#                                        value=100.0,
-#                                        min_value=0.0,
-#                                        step=0.1,
-#                                        key="today_open_input")
-
 # Get today and 3 days before
 today = datetime.now().date()
 start_fetch = today - timedelta(days=3)
@@ -68,11 +44,35 @@ if not recent_data.empty:
     today_open_input = float(recent_data["Open"].iloc[-1])
 
     st.sidebar.success(f"Open Price Used: {today_open_input:.2f}")
-    st.sidebar.write(f"Date Used: {recent_data.index[-1].date()}")
+    st.sidebar.write(f"🟠Date Used: {recent_data.index[-1].date()}")
 
 else:
     st.sidebar.error("No recent market data found.")
     st.stop()
+# Calendar date selection
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    start_date = st.date_input("Start Date",
+                              value=datetime(2010, 1, 1).date(),
+                              min_value=datetime(2010, 1, 1).date(),
+                              max_value=datetime.now().date())
+with col2:
+    end_date = st.date_input("Forecast Date",
+                            value=datetime.now().date(),
+                            min_value=datetime(2010, 1, 1).date(),
+                            max_value=recent_data.index[-1].date())
+
+# Price type selection
+price_type = st.sidebar.selectbox("Select Dependent Price Type (Y)", ["High", "Low", "Open", "Close", "Adj Close"])
+price_type1 = st.sidebar.selectbox("Select Independent Price Type (X)", [ "Open"])
+st.sidebar.header("Forecast Input")
+# today_open_input = st.sidebar.number_input(f"Enter Today's Open Price",
+#                                        value=100.0,
+#                                        min_value=0.0,
+#                                        step=0.1,
+#                                        key="today_open_input")
+
+
     
 degree = st.sidebar.slider("Polynomial Degree", 1, 10, 3)
 
