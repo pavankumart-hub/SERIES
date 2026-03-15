@@ -17,7 +17,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="📈 HYBRID ARIMA Stock Forecast (stable)", layout="wide")
-st.title("Polynomial Regression + ARIMA Stock Forecast")
+st.title("Polynomial Regression+ARIMA, ARIMA Stock Forecast")
 st.markdown("Wait a moment, something extraordinary is about to unfold.")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
 st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PKT")
@@ -223,7 +223,7 @@ if run_analysis_btn:
 
         X = (dates - dates_mean) / dates_range
         y = price_data.values.astype(float).ravel()
-
+         
         # Polynomial regression model
         poly = PolynomialFeatures(degree=degree, include_bias=False)
         X_poly = poly.fit_transform(X)
@@ -249,9 +249,8 @@ if run_analysis_btn:
         percent_change = (price_change / current_price) * 100
 
         # Streamlit display
-
-        st.subheader("0 Crude 🟢🟢🟢Next Day Forecast🟢🟢🟢")
-        st.write("1. Polynomial Regression🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠")
+        st.subheader("🟠🟠🟠🟠 1. Polynomial Regression 🟠🟠🟠🟠") 
+        st.write("0 Crude 🟢🟢🟢Next Day Forecast🟢🟢🟢")
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric(
@@ -383,13 +382,13 @@ if run_analysis_btn:
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Mean", f"{residual_mean:.6f}")
+            st.metric("🟠Mean", f"{residual_mean:.6f}")
         with col2:
-            st.metric("Std Dev", f"{residual_std:.6f}")
+            st.metric("🟠Std Dev", f"{residual_std:.6f}")
         with col3:
-            st.metric("Skewness", f"{residual_skew:.4f}")
+            st.metric("🟠Skewness", f"{residual_skew:.4f}")
         with col4:
-            st.metric("Kurtosis", f"{residual_kurtosis:.4f}")
+            st.metric("🟠Kurtosis", f"{residual_kurtosis:.4f}")
 
         # Plot histogram
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -460,7 +459,6 @@ if run_analysis_btn:
         # ARIMA Analysis on Residuals
         
         st.header("🟠🟠🟠🟠1.1 ARIMA Analysis on Residuals FINE TUNING🟠🟠🟠🟠")
-        st.write("🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠")
         st.write(f"**ARIMA Parameters Range:**")
         st.write(f"- P (AR): {p_range[0]} to {p_range[1]}")
         st.write(f"- D (Differencing): {d_range[0]} to {d_range[1]}")
@@ -618,8 +616,7 @@ if run_analysis_btn:
 
         #Polynomial Regression with Multiple Features
         
-        st.header("🟠🟠🟠2.Polynomial Regression with Multiple Features🟠🟠🟠")
-        st.write("🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠")
+        st.header("🟠🟠🟠🟠2.Polynomial Regression with Multiple Features🟠🟠🟠🟠")
         # Prepare features (dates as ordinal)
         dates = np.array([d.toordinal() for d in price_data.index]).reshape(-1, 1).astype(float)
         dates_mean = float(dates.mean(axis=0)[0])
@@ -894,12 +891,12 @@ if run_analysis_btn:
         col1, col2, col3 = st.columns(3)
         with col1:
                 st.metric(
-                        "Today's Open",
+                        "Current Open",
                         f"{currency_symbol}{today_open:.2f}"
                 )
         with col2:
                 st.metric(
-                        "Predicted Price",
+                        "🟢 Predicted Price 🟢 ",
                         f"{currency_symbol}{forecast_value:.2f}",
                         delta=f"{forecast_value - today_open:.2f}"
                 )
@@ -958,7 +955,7 @@ if run_analysis_btn:
                 if jb_p > 0.05:
                         st.success("Residuals appear normal (p > 0.05)")
                 else:
-                        st.warning("Residuals not normal (p ≤ 0.05)")
+                        st.error("Residuals not normal (p ≤ 0.05)")
 
         with col2:
                 # Autocorrelation Test (Ljung-Box)
@@ -971,7 +968,7 @@ if run_analysis_btn:
                 if lb_p > 0.05:
                         st.success("No significant autocorrelation (p > 0.05)")
                 else:
-                        st.warning("Significant autocorrelation present (p ≤ 0.05)")
+                        st.error("Significant autocorrelation present (p ≤ 0.05)")
 
         # ACF Plot
         st.write("**Autocorrelation Function (ACF):**")
@@ -984,7 +981,7 @@ if run_analysis_btn:
         st.pyplot(fig3)
 
         # ARIMA Analysis on Original Stock Data
-        st.header("ARIMA Analysis on Original Stock Data")
+        st.header("🟠🟠🟠🟠 3. ARIMA Analysis on Original Stock Data🟠🟠🟠🟠")
 
         st.subheader("ARIMA Model Selection for Original Data")
         st.write(f"**ARIMA Parameters Range:**")
@@ -1076,7 +1073,7 @@ if run_analysis_btn:
             st.subheader("📊 ARIMA Fitted vs Open Price Comparison")
             st.write(f"**Fitted > Open:** {pred_higher} ({pct_higher:.2f}%)")
             st.write(f"**Fitted = Open:** {pred_equal} ({pct_equal:.2f}%)")
-            st.write(f"**Fitted < Open:** {pred_lower} ({pct_lower:.2f}%)")
+            st.error(f"**Fitted < Open:** {pred_lower} ({pct_lower:.2f}%)")
 
             # --- Bar Chart with % Labels ---
             comparison_df = pd.DataFrame(comparison_data)
@@ -1139,7 +1136,7 @@ if run_analysis_btn:
             st.pyplot(fig)
 
             # ARIMA Forecast for next 5 days on Original Data
-            st.subheader("ARIMA Forecast for Next 2 Days (Stock Prices)")
+            st.subheader("🟢🟢🟢ARIMA Forecast for Next 2 Days (Stock Prices)🟢🟢🟢")
 
             # Forecast next 2 days
             forecast_steps = 2
@@ -1160,10 +1157,10 @@ if run_analysis_btn:
             future_dates_original = [last_date + timedelta(days=i) for i in range(1, forecast_steps + 1)]
 
             # Display forecasted values
-            st.subheader("🎯 5-Day Stock Price Forecast")
+            st.subheader("🟢🟢🟢5-Day Stock Price Forecast🟢🟢🟢")
 
             # Forecast table
-            st.write("**Forecasted Stock Prices:**")
+            st.write("🟢🟢🟢**Forecasted Stock Prices🟢🟢🟢:**")
             forecast_original_data = []
             for i in range(forecast_steps):
                 forecast_value = float(price_forecast[i])
@@ -1233,7 +1230,7 @@ if run_analysis_btn:
 
             # Get the corresponding dates for the residuals (adjust for removed values)
             residual_dates = price_data.index[len(price_data) - len(arima_residuals_clean):]
-            ax.plot(residual_dates, arima_residuals_clean, label='ARIMA Residuals', linewidth=1)
+            ax.plot(residual_dates, arima_residuals_clean, label='ARIMA Residuals', linewidth=1,color="red)
             ax.axhline(0, linestyle='--', color='k')
             ax.set_xlabel('Date')
             ax.set_ylabel(f'Residual ({currency_symbol})')
@@ -1282,13 +1279,13 @@ if run_analysis_btn:
 
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Mean", f"{arima_residual_mean:.6f}")
+                st.metric("🟠Mean", f"{arima_residual_mean:.6f}")
             with col2:
-                st.metric("Std Dev", f"{arima_residual_std:.6f}")
+                st.metric("🟠Std Dev", f"{arima_residual_std:.6f}")
             with col3:
-                st.metric("Skewness", f"{arima_residual_skew:.4f}")
+                st.metric("🟠Skewness", f"{arima_residual_skew:.4f}")
             with col4:
-                st.metric("Kurtosis", f"{arima_residual_kurtosis:.4f}")
+                st.metric("🟠Kurtosis", f"{arima_residual_kurtosis:.4f}")
 
             # Plot histogram
             fig, ax = plt.subplots(figsize=(10, 6))
@@ -1344,7 +1341,7 @@ if run_analysis_btn:
 
             # Model Summary
             st.subheader("ARIMA Model Summary")
-            st.write("A well-fitting ARIMA model should have:")
+            st.write("1️⃣A well-fitting ARIMA model should have:")
             st.write("✓ Stationary residuals (ADF test p-value ≤ 0.05)")
             st.write("✓ No significant autocorrelation in residuals (Ljung-Box p-value > 0.05)")
             st.write("✓ Normally distributed residuals (Jarque-Bera p-value > 0.05)")
@@ -1366,15 +1363,15 @@ if run_analysis_btn:
             else:
                 quality_checks.append("✗ Residuals are not normally distributed")
 
-            st.write("**Model Quality Assessment:**")
+            st.write("2️⃣**Model Quality Assessment:**")
             for check in quality_checks:
                 st.write(check)
 
             # FINAL ARIMA FORECAST VALUES - NEW SECTION
-            st.header("🎯 Final ARIMA Forecast Values")
+            st.header("🟢🟢🟢Final ARIMA Forecast Values🟢🟢🟢")
 
             # Create a clean display of the 5-day forecast
-            st.subheader("5-Day Stock Price Forecast Summary")
+            st.subheader("🟢🟢🟢5-Day Stock Price Forecast Summary🟢🟢🟢")
 
             forecast_summary = []
             for i in range(forecast_steps):
@@ -1401,7 +1398,7 @@ if run_analysis_btn:
             st.dataframe(final_forecast_df, use_container_width=True)
 
             # Also show as individual metrics for Day 1 forecast
-            st.subheader("Tomorrow's Forecast (Day 1)")
+            st.subheader("🟢🟢🟢Tomorrow's Forecast (Day 1)🟢🟢🟢")
             col1, col2, col3 = st.columns(3)
 
             day1_forecast = float(price_forecast[0])
@@ -1410,7 +1407,7 @@ if run_analysis_btn:
 
             with col1:
                 st.metric(
-                    "Forecasted Price",
+                    "🟢Forecasted Price🟢",
                     f"{currency_symbol}{day1_forecast:.2f}",
                     f"{day1_change:+.2f} ({day1_percent:+.2f}%)"
                 )
@@ -1445,7 +1442,7 @@ if run_analysis_btn:
                 st.metric("Average Daily Change", f"{currency_symbol}{avg_daily_change:+.2f}")
 
             # HIGH-OPEN PERCENTAGE ANALYSIS - NEW SECTION
-            st.header("📊 High-Open Percentage Analysis")
+            st.header("🟠🟠🟠🟠 4. High-Open Percentage Analysis🟠🟠🟠🟠")
             st.markdown("This analysis shows the daily price movement as percentage: `(High - Open) / Open * 100`")
 
             # Calculate high-open percentage
@@ -1610,7 +1607,7 @@ if run_analysis_btn:
                 st.warning("High and Open price data not available for analysis")
 
             # LOW-OPEN PERCENTAGE ANALYSIS - NEW SECTION
-            st.header("📊 Low-Open Percentage Analysis")
+            st.header("🟠🟠🟠🟠 5. Low-Open Percentage Analysis🟠🟠🟠🟠")
             st.markdown("This analysis shows the daily price movement as percentage: `(Open - Low) / Open * 100`")
 
             # Calculate low-open percentage
