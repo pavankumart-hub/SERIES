@@ -16,7 +16,9 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="📈 HYBRID ARIMA Stock Forecast (stable)", layout="wide")
+st.set_page_config(page_title="📈 Sector Future", layout="wide")
+st.sidebar.image("logo.png", width=150)
+st.sidebar.title("Sector Future")
 st.title("Polynomial Regression+ARIMA, ARIMA Stock Forecast")
 st.markdown("Wait a moment, something extraordinary is about to unfold.")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
@@ -2261,4 +2263,4 @@ if run_forecast_btn:
 with st.sidebar:
     st.markdown("---")
     st.markdown("""**"One of the funny things about the stock market is that every time one person buys, another sells, and both think they are astute"-William Feather**""")
-    st.markdown("""**gmail: pavankumarthota96@gmail.com**""")
+    st.markdown("""**gmail:research@sectorfuture.com**""")
