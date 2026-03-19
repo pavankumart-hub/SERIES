@@ -17,9 +17,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title="📈 Sector Future", layout="wide")
-st.sidebar.image("logo.png", width=150)
-st.sidebar.title("Sector Future")
-st.title("Polynomial Regression+ARIMA, ARIMA Stock Forecast")
+st.sidebar.image("logo.png", width=250)
+st.title("POLYNOMIAL REGRESSION+ARIMA, ARIMA STOCK FORECAST")
 st.markdown("Wait a moment, something extraordinary is about to unfold.")
 st.markdown("Live your Life as an Exclamation rather than an Explanation-SIR ISSAC NEWTON")
 st.markdown("True perspective of God's creation lies in the Art of understanding Mathematics-PKT")
@@ -1822,7 +1821,7 @@ if run_analysis_btn:
             else:
                 st.warning("Low and Open price data not available for analysis")
 #Second Analysis
-st.set_page_config(page_title="Low-Open ARIMA Forecast", layout="wide")
+st.set_page_config(page_title="Sector Future", layout="wide")
 st.title("📈 Low-Open Percentage ARIMA Forecast")
 st.markdown("Model and forecast the `(High - Open) / Open * 100` percentage using ARIMA")
 
@@ -2263,4 +2262,4 @@ if run_forecast_btn:
 with st.sidebar:
     st.markdown("---")
     st.markdown("""**"One of the funny things about the stock market is that every time one person buys, another sells, and both think they are astute"-William Feather**""")
-    st.markdown("""**gmail:research@sectorfuture.com**""")
+    st.markdown("""**gmail: research@sectorfuture.com** """)
