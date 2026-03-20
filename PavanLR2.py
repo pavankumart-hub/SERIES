@@ -16,7 +16,7 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="📈 Sector Future", layout="wide")
+st.set_page_config(page_title="📈Sector Future", layout="wide")
 st.sidebar.image("logo.png", width=250)
 st.title("POLYNOMIAL REGRESSION+ARIMA, ARIMA STOCK FORECAST")
 st.markdown("Wait a moment, something extraordinary is about to unfold.")
